@@ -28,6 +28,7 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
             setShowTopButton(false);
         }
     };
+    
 
     useEffect(() => {
         window.addEventListener('scroll', onScrollHandler);
