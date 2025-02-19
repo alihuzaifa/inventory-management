@@ -59,7 +59,7 @@ const Add = () => {
                         </div>
                         <div className="space-y-1 mt-6 text-gray-500 dark:text-gray-400">
                             <div>13 Tetrick Road, Cypress Gardens, Florida, 33884, US</div>
-                            <div>vristo@gmail.com</div>
+                            <div>Inventory@gmail.com</div>
                             <div>+1 (070) 123-4567</div>
                         </div>
                     </div>
