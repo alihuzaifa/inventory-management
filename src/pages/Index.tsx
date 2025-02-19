@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
 import PerfectScrollbar from 'react-perfect-scrollbar';
-import Dropdown from '../components/Dropdown';
+// import Dropdown from '../components/Dropdown';
 import { setPageTitle } from '../store/themeConfigSlice';
 import IconHorizontalDots from '../components/Icon/IconHorizontalDots';
 import IconDollarSign from '../components/Icon/IconDollarSign';
@@ -420,7 +420,7 @@ const Index = () => {
                         <div className="flex items-center justify-between dark:text-white-light mb-5">
                             <h5 className="font-semibold text-lg">Revenue</h5>
                             <div className="dropdown">
-                                <Dropdown
+                                {/* <Dropdown
                                     offset={[0, 1]}
                                     placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
                                     button={<IconHorizontalDots className="text-black/70 dark:text-white/70 hover:!text-primary" />}
@@ -436,7 +436,7 @@ const Index = () => {
                                             <button type="button">Yearly</button>
                                         </li>
                                     </ul>
-                                </Dropdown>
+                                </Dropdown> */}
                             </div>
                         </div>
                         <p className="text-lg dark:text-white-light/90">
@@ -502,7 +502,7 @@ const Index = () => {
                         <div className="flex items-center justify-between dark:text-white-light mb-5">
                             <h5 className="font-semibold text-lg">Summary</h5>
                             <div className="dropdown">
-                                <Dropdown
+                                {/* <Dropdown
                                     placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
                                     button={<IconHorizontalDots className="w-5 h-5 text-black/70 dark:text-white/70 hover:!text-primary" />}
                                 >
@@ -517,7 +517,7 @@ const Index = () => {
                                             <button type="button">Mark as Done</button>
                                         </li>
                                     </ul>
-                                </Dropdown>
+                                </Dropdown> */}
                             </div>
                         </div>
                         <div className="space-y-9">
@@ -728,7 +728,7 @@ const Index = () => {
                         <div className="flex items-center justify-between dark:text-white-light mb-5">
                             <h5 className="font-semibold text-lg">Transactions</h5>
                             <div className="dropdown">
-                                <Dropdown placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`} button={<IconHorizontalDots className="text-black/70 dark:text-white/70 hover:!text-primary" />}>
+                                {/* <Dropdown placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`} button={<IconHorizontalDots className="text-black/70 dark:text-white/70 hover:!text-primary" />}>
                                     <ul>
                                         <li>
                                             <button type="button">View Report</button>
@@ -740,7 +740,7 @@ const Index = () => {
                                             <button type="button">Mark as Done</button>
                                         </li>
                                     </ul>
-                                </Dropdown>
+                                </Dropdown> */}
                             </div>
                         </div>
                         <div>

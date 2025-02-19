@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { useEffect } from 'react';
-import { setPageTitle } from '../../store/themeConfigSlice';
-import IconMail from '../../components/Icon/IconMail';
-import IconLockDots from '../../components/Icon/IconLockDots';
+import { setPageTitle } from '../store/themeConfigSlice';
+import IconMail from '../components/Icon/IconMail';
+import IconLockDots from '../components/Icon/IconLockDots';
 
 const LoginBoxed = () => {
     const dispatch = useDispatch();
