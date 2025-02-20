@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 const Index = lazy(() => import('../pages/Index'));
+const Invoice = lazy(() => import('../pages/Invoice'));
 const KhataUser = lazy(() => import('../pages/KhataUser'));
 const Sale = lazy(() => import('../pages/Sale'));
 const Purchase = lazy(() => import('../pages/Purchase'));
@@ -30,6 +31,10 @@ const routes = [
     {
         path: '/stock',
         element: <Stock />,
+    },
+    {
+        path: '/invoice',
+        element: <Invoice />,
     },
     {
         path: '/khataUser',
