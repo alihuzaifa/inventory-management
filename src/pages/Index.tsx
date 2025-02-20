@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
-import Dropdown from '../components/Dropdown';
 import { setPageTitle } from '../store/themeConfigSlice';
-import IconHorizontalDots from '../components/Icon/IconHorizontalDots';
 
 const Index = () => {
     const dispatch = useDispatch();
@@ -186,7 +184,7 @@ const Index = () => {
                         <div className="flex items-center justify-between dark:text-white-light mb-5">
                             <h5 className="font-semibold text-lg">Revenue</h5>
                             <div className="dropdown">
-                                <Dropdown
+                                {/* <Dropdown
                                     offset={[0, 1]}
                                     placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
                                     button={<IconHorizontalDots className="text-black/70 dark:text-white/70 hover:!text-primary" />}
@@ -202,7 +200,7 @@ const Index = () => {
                                             <button type="button">Yearly</button>
                                         </li>
                                     </ul>
-                                </Dropdown>
+                                </Dropdown> */}
                             </div>
                         </div>
                         <p className="text-lg dark:text-white-light/90">

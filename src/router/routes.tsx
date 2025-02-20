@@ -1,9 +1,10 @@
 import { lazy } from 'react';
-import Export from '../pages/DataTables/Export';
-import Suppler from '../components/Suppler';
 const Index = lazy(() => import('../pages/Index'));
-const ERROR404 = lazy(() => import('../pages/Pages/Error404'));
-const LoginBoxed = lazy(() => import('../pages/Authentication/LoginBoxed'));
+const Purchase = lazy(() => import('../pages/Purchase'));
+const ERROR404 = lazy(() => import('../pages/Error404'));
+const Stock = lazy(() => import('../pages/Stock'));
+const LoginBoxed = lazy(() => import('../pages/LoginBoxed'));
+const Suppler = lazy(() => import('../pages/Suppler'));
 
 const routes = [
     // dashboard
@@ -17,7 +18,7 @@ const routes = [
     },
     {
         path: '/purchase',
-        element: <Suppler />,
+        element: <Purchase />,
     },
     {
         path: '/sale',
@@ -26,9 +27,9 @@ const routes = [
     // Data Tables
     {
         path: '/stock',
-        element: <Export />,
+        element: <Stock />,
     },
-    
+
     {
         path: '/login',
         element: <LoginBoxed />,
