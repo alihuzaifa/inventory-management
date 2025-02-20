@@ -11,22 +11,18 @@ import IconTrash from '../components/Icon/IconTrash';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import { downloadExcel } from 'react-export-table-to-excel';
-const col = ['id', 'supplierName', 'product', 'quantity', 'totalPrice', 'payingAmount', 'remainingAmount', 'purchaseDate', 'paymentStatus'];
-const header = ['Id', 'Supplier', 'Product', 'Quantity', 'Total Price', 'Paying Amount', 'Remaining Amount', 'Purchase Date', 'Payment Status'];
-const Purchase = () => {
+
+const col = ['id', 'customerName', 'product', 'quantity', 'totalPrice', 'payingAmount', 'remainingAmount', 'phoneNumber', 'saleDate'];
+const header = ['Id', 'Customer Name', 'Product', 'Quantity', 'Total Price', 'Paying Amount', 'Remaining Amount', 'Phone Number', 'Sale Date'];
+
+const Sale = () => {
     const dispatch = useDispatch();
     useEffect(() => {
-        dispatch(setPageTitle('Purchase Form'));
+        dispatch(setPageTitle('Sale Form'));
     }, []);
 
     const [editMode, setEditMode] = useState(false);
     const formikRef = useRef<any>(null);
-
-    // Sample supplier data for dropdown
-    const suppliers = [
-        { id: 1, name: 'Ali Trading Company' },
-        { id: 2, name: 'Karachi Electronics' },
-    ];
 
     const submitForm = () => {
         const toast = Swal.mixin({
@@ -37,13 +33,13 @@ const Purchase = () => {
         });
         toast.fire({
             icon: 'success',
-            title: 'Purchase added successfully',
+            title: 'Sale added successfully',
             padding: '10px 20px',
         });
     };
 
-    const purchaseSchema = Yup.object().shape({
-        supplierId: Yup.string().required('Supplier is required'),
+    const saleSchema = Yup.object().shape({
+        customerName: Yup.string().required('Customer name is required'),
         product: Yup.string().required('Product name is required'),
         quantity: Yup.number().required('Quantity is required').positive('Quantity must be positive'),
         totalPrice: Yup.number().required('Total price is required').positive('Price must be positive'),
@@ -53,32 +49,35 @@ const Purchase = () => {
             .test('max', 'Paying amount cannot exceed total price', function (value) {
                 return !value || value <= this.parent.totalPrice;
             }),
+        phoneNumber: Yup.string()
+            .matches(/^[0-9]+$/, 'Phone number must contain only digits')
+            .min(11, 'Phone number must be at least 11 digits')
+            .max(11, 'Phone number must not exceed 11 digits'),
     });
-    // Sample purchase data
+
+    // Sample sale data
     const rowData = [
         {
             id: 1,
-            supplierId: 1,
-            supplierName: 'Ali Trading Company',
+            customerName: 'John Doe',
             product: 'LED TV',
-            quantity: 5,
-            totalPrice: 250000,
-            payingAmount: 250000,
+            quantity: 1,
+            totalPrice: 50000,
+            payingAmount: 50000,
             remainingAmount: 0,
-            purchaseDate: '2024-01-15',
-            paymentStatus: 'paid',
+            phoneNumber: '03001234567',
+            saleDate: '2024-01-15',
         },
         {
             id: 2,
-            supplierId: 2,
-            supplierName: 'Karachi Electronics',
+            customerName: 'Jane Smith',
             product: 'Laptop',
-            quantity: 3,
-            totalPrice: 450000,
-            payingAmount: 200000,
-            remainingAmount: 250000,
-            purchaseDate: '2024-01-16',
-            paymentStatus: 'partially paid',
+            quantity: 1,
+            totalPrice: 150000,
+            payingAmount: 100000,
+            remainingAmount: 50000,
+            phoneNumber: '03009876543',
+            saleDate: '2024-01-16',
         },
     ];
 
@@ -90,18 +89,20 @@ const Purchase = () => {
     const [recordsData, setRecordsData] = useState(initialRecords);
     const [search, setSearch] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
+
+    // Update these effects for proper searching, sorting, and pagination
     useEffect(() => {
         const filteredData = rowData.filter((item: any) => {
             const searchLower = search.toLowerCase();
             return (
                 item.id.toString().includes(searchLower) ||
-                item.supplierName.toLowerCase().includes(searchLower) ||
+                item.customerName.toLowerCase().includes(searchLower) ||
                 item.product.toLowerCase().includes(searchLower) ||
                 item.quantity.toString().includes(searchLower) ||
                 item.totalPrice.toString().includes(searchLower) ||
+                (item.phoneNumber && item.phoneNumber.includes(searchLower)) ||
                 (item.payingAmount && item.payingAmount.toString().includes(searchLower)) ||
-                formatDate(item.purchaseDate).includes(searchLower) ||
-                item.paymentStatus.toLowerCase().includes(searchLower)
+                formatDate(item.saleDate).includes(searchLower)
             );
         });
 
@@ -116,17 +117,29 @@ const Purchase = () => {
         setRecordsData(sorted.slice(from, to));
     }, [search, sortStatus, page, pageSize]);
 
-    // Add effect for pagination
+    // Reset page when pageSize changes
     useEffect(() => {
         setPage(1);
     }, [pageSize]);
 
-    // Add effect for sorting
+    // Handle sorting
     useEffect(() => {
         const data = sortBy(initialRecords, sortStatus.columnAccessor);
-        setInitialRecords(sortStatus.direction === 'desc' ? data.reverse() : data);
-        setPage(1);
+        const sorted = sortStatus.direction === 'desc' ? data.reverse() : data;
+        setInitialRecords(sorted);
+
+        // Update recordsData with new sorted and paginated results
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize;
+        setRecordsData(sorted.slice(from, to));
     }, [sortStatus]);
+
+    // Update records when page changes
+    useEffect(() => {
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize;
+        setRecordsData(initialRecords.slice(from, to));
+    }, [page, pageSize, initialRecords]);
 
     const formatDate = (date: string) => {
         if (date) {
@@ -139,15 +152,16 @@ const Purchase = () => {
     };
 
     const handleEdit = (id: number) => {
-        const purchase = rowData.find((item) => item.id === id);
-        if (purchase) {
+        const sale = rowData.find((item) => item.id === id);
+        if (sale) {
             if (formikRef.current) {
                 formikRef.current.setValues({
-                    supplierId: purchase.supplierId,
-                    product: purchase.product,
-                    quantity: purchase.quantity,
-                    totalPrice: purchase.totalPrice,
-                    paymentStatus: purchase.paymentStatus,
+                    customerName: sale.customerName,
+                    product: sale.product,
+                    quantity: sale.quantity,
+                    totalPrice: sale.totalPrice,
+                    payingAmount: sale.payingAmount,
+                    phoneNumber: sale.phoneNumber,
                 });
             }
             setEditMode(true);
@@ -167,24 +181,15 @@ const Purchase = () => {
                 const updatedData = initialRecords.filter((item) => item.id !== id);
                 setInitialRecords(updatedData);
                 setRecordsData(updatedData);
-                Swal.fire('Deleted!', 'Purchase has been deleted.', 'success');
+                Swal.fire('Deleted!', 'Sale has been deleted.', 'success');
             }
         });
-    };
-
-    const getStatusBadge = (status: string) => {
-        const badges = {
-            paid: <span>Paid</span>,
-            'partially paid': <span>Partially Paid</span>,
-            unpaid: <span>Unpaid</span>,
-        };
-        return badges[status as keyof typeof badges] || status;
     };
 
     const exportTable = (type: string) => {
         let columns: any = col;
         let records = rowData;
-        let filename = 'Purchase Record';
+        let filename = 'Sale Record';
 
         let newVariable: any;
         newVariable = window.navigator;
@@ -208,7 +213,7 @@ const Purchase = () => {
                         val = `Rs. ${val.toLocaleString()}`;
                     } else if (d === 'remainingAmount') {
                         val = `Rs. ${(item.totalPrice - (item.payingAmount || 0)).toLocaleString()}`;
-                    } else if (d === 'purchaseDate') {
+                    } else if (d === 'saleDate') {
                         val = formatDate(val);
                     }
                     result += val;
@@ -247,7 +252,7 @@ const Purchase = () => {
                         val = `Rs. ${val.toLocaleString()}`;
                     } else if (d === 'remainingAmount') {
                         val = `Rs. ${(item.totalPrice - (item.payingAmount || 0)).toLocaleString()}`;
-                    } else if (d === 'purchaseDate') {
+                    } else if (d === 'saleDate') {
                         val = formatDate(val);
                     }
                     rowhtml += '<td>' + val + '</td>';
@@ -268,17 +273,19 @@ const Purchase = () => {
     function handleDownloadExcel() {
         const excelData = rowData.map((item) => ({
             ID: item.id,
-            Supplier: item.supplierName,
+            'Customer Name': item.customerName,
             Product: item.product,
             Quantity: item.quantity,
             'Total Price': `Rs. ${item.totalPrice.toLocaleString()}`,
-            'Purchase Date': formatDate(item.purchaseDate),
-            'Payment Status': item.paymentStatus,
+            'Paying Amount': `Rs. ${item.payingAmount.toLocaleString()}`,
+            'Remaining Amount': `Rs. ${(item.totalPrice - item.payingAmount).toLocaleString()}`,
+            'Phone Number': item.phoneNumber,
+            'Sale Date': formatDate(item.saleDate),
         }));
 
         downloadExcel({
-            fileName: 'purchases',
-            sheet: 'Purchases',
+            fileName: 'sales',
+            sheet: 'Sales',
             tablePayload: {
                 header,
                 body: excelData,
@@ -286,22 +293,29 @@ const Purchase = () => {
         });
     }
 
+    const products = [
+        { id: 1, name: 'LED TV' },
+        { id: 2, name: 'Laptop' },
+        { id: 3, name: 'Mobile Phone' },
+        { id: 4, name: 'Refrigerator' },
+    ];
+
     return (
         <>
             <div className="panel">
                 <div className="mb-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light mb-4">{editMode ? 'Edit Purchase' : 'Add Purchase'}</h5>
+                    <h5 className="font-semibold text-lg dark:text-white-light mb-4">{editMode ? 'Edit Sale' : 'Add Sale'}</h5>
                     <Formik
                         innerRef={formikRef}
                         initialValues={{
-                            supplierId: '',
+                            customerName: '',
                             product: '',
                             quantity: '',
                             totalPrice: '',
                             payingAmount: '',
-                            paymentStatus: '',
+                            phoneNumber: '',
                         }}
-                        validationSchema={purchaseSchema}
+                        validationSchema={saleSchema}
                         onSubmit={(values, { resetForm }) => {
                             const remainingAmount = Number(values.totalPrice) - Number(values.payingAmount);
                             let status = 'unpaid';
@@ -310,8 +324,6 @@ const Purchase = () => {
                             } else if (Number(values.payingAmount) > 0) {
                                 status = 'partially paid';
                             }
-                            values.paymentStatus = status;
-                            console.log(values);
                             submitForm();
                             resetForm();
                             setEditMode(false);
@@ -320,32 +332,38 @@ const Purchase = () => {
                         {({ errors, submitCount, values }) => (
                             <Form className="space-y-5">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div className={submitCount ? (errors.supplierId ? 'has-error' : 'has-success') : ''}>
-                                        <label htmlFor="supplierId">Supplier *</label>
-                                        <Field as="select" name="supplierId" id="supplierId" className="form-select">
-                                            <option value="">Select Supplier</option>
-                                            {suppliers.map((supplier) => (
-                                                <option key={supplier.id} value={supplier.id}>
-                                                    {supplier.name}
+                                    <div className={submitCount ? (errors.customerName ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="customerName">Customer Name *</label>
+                                        <Field name="customerName" type="text" id="customerName" placeholder="Enter Customer Name" className="form-input" />
+                                        {submitCount > 0 && errors.customerName && <div className="text-danger mt-1">{errors.customerName}</div>}
+                                    </div>
+
+                                    <div className={submitCount ? (errors.phoneNumber ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="phoneNumber">Phone Number</label>
+                                        <Field name="phoneNumber" type="text" id="phoneNumber" placeholder="Enter Phone Number" className="form-input" />
+                                        {submitCount > 0 && errors.phoneNumber && <div className="text-danger mt-1">{errors.phoneNumber}</div>}
+                                    </div>
+                                    <div className={submitCount ? (errors.product ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="product">Product Name *</label>
+                                        <Field as="select" name="product" id="product" className="form-select">
+                                            <option value="">Select Product</option>
+                                            {products.map((product) => (
+                                                <option key={product.id} value={product.name}>
+                                                    {product.name}
                                                 </option>
                                             ))}
                                         </Field>
-                                        {submitCount > 0 && errors.supplierId && <div className="text-danger mt-1">{errors.supplierId}</div>}
-                                    </div>
-
-                                    <div className={submitCount ? (errors.product ? 'has-error' : 'has-success') : ''}>
-                                        <label htmlFor="product">Product Name *</label>
-                                        <Field name="product" type="text" id="product" placeholder="Enter Product Name" className="form-input" />
                                         {submitCount > 0 && errors.product && <div className="text-danger mt-1">{errors.product}</div>}
                                     </div>
+                                </div>
 
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                     <div className={submitCount ? (errors.quantity ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="quantity">Quantity *</label>
                                         <Field name="quantity" type="number" id="quantity" placeholder="Enter Quantity" className="form-input" />
                                         {submitCount > 0 && errors.quantity && <div className="text-danger mt-1">{errors.quantity}</div>}
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
                                     <div className={submitCount ? (errors.totalPrice ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="totalPrice">Total Price *</label>
                                         <Field name="totalPrice" type="number" id="totalPrice" placeholder="Enter Total Price" className="form-input" />
@@ -357,37 +375,13 @@ const Purchase = () => {
                                         <Field name="payingAmount" type="number" id="payingAmount" placeholder="Enter Paying Amount" className="form-input" />
                                         {submitCount > 0 && errors.payingAmount && <div className="text-danger mt-1">{errors.payingAmount}</div>}
                                     </div>
-
-                                    <div>
-                                        <label htmlFor="paymentStatus">Payment Status</label>
-                                        <Field
-                                            as="select"
-                                            name="paymentStatus"
-                                            id="paymentStatus"
-                                            className="form-select"
-                                            disabled
-                                            value={
-                                                values.totalPrice && values.payingAmount
-                                                    ? values.payingAmount === values.totalPrice
-                                                        ? 'paid'
-                                                        : Number(values.payingAmount) > 0
-                                                        ? 'partially paid'
-                                                        : 'unpaid'
-                                                    : ''
-                                            }
-                                        >
-                                            <option value="">Select Status</option>
-                                            <option value="paid">Paid</option>
-                                            <option value="partially paid">Partially Paid</option>
-                                            <option value="unpaid">Unpaid</option>
-                                        </Field>
-                                    </div>
                                 </div>
-                                <div className="flex justify-end">
+
+                                <div className="flex justify-end gap-4">
                                     {editMode && (
                                         <button
                                             type="button"
-                                            className="btn btn-danger ml-4"
+                                            className="btn btn-danger"
                                             onClick={() => {
                                                 setEditMode(false);
                                                 formikRef.current.resetForm();
@@ -397,7 +391,7 @@ const Purchase = () => {
                                         </button>
                                     )}
                                     <button type="submit" className="btn btn-primary">
-                                        {editMode ? 'Update Purchase' : 'Add Purchase'}
+                                        {editMode ? 'Update Sale' : 'Add Sale'}
                                     </button>
                                 </div>
                             </Form>
@@ -407,7 +401,6 @@ const Purchase = () => {
             </div>
 
             <div className="panel mt-6">
-                {/* Export buttons section */}
                 <div className="flex md:items-center justify-between md:flex-row flex-col mb-4.5 gap-5">
                     <div className="flex items-center flex-wrap">
                         <button type="button" onClick={() => exportTable('csv')} className="btn btn-primary btn-sm m-1 ">
@@ -427,7 +420,6 @@ const Purchase = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
 
-                {/* DataTable */}
                 <div className="datatables">
                     <DataTable
                         highlightOnHover
@@ -435,7 +427,8 @@ const Purchase = () => {
                         records={recordsData}
                         columns={[
                             { accessor: 'id', title: '#', sortable: true },
-                            { accessor: 'supplierName', title: 'Supplier', sortable: true },
+                            { accessor: 'customerName', title: 'Customer Name', sortable: true },
+                            { accessor: 'phoneNumber', title: 'Phone Number', sortable: true },
                             { accessor: 'product', title: 'Product', sortable: true },
                             { accessor: 'quantity', title: 'Quantity', sortable: true },
                             {
@@ -457,16 +450,10 @@ const Purchase = () => {
                                 render: ({ totalPrice, payingAmount }) => `Rs. ${(totalPrice - (payingAmount || 0)).toLocaleString()}`,
                             },
                             {
-                                accessor: 'purchaseDate',
-                                title: 'Purchase Date',
+                                accessor: 'saleDate',
+                                title: 'Sale Date',
                                 sortable: true,
-                                render: ({ purchaseDate }) => formatDate(purchaseDate),
-                            },
-                            {
-                                accessor: 'paymentStatus',
-                                title: 'Payment Status',
-                                sortable: true,
-                                render: ({ paymentStatus }) => getStatusBadge(paymentStatus),
+                                render: ({ saleDate }) => formatDate(saleDate),
                             },
                             {
                                 accessor: 'actions',
@@ -500,4 +487,4 @@ const Purchase = () => {
     );
 };
 
-export default Purchase;
+export default Sale;

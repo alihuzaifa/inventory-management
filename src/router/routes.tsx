@@ -1,10 +1,11 @@
 import { lazy } from 'react';
 const Index = lazy(() => import('../pages/Index'));
+const Sale = lazy(() => import('../pages/Sale'));
 const Purchase = lazy(() => import('../pages/Purchase'));
 const ERROR404 = lazy(() => import('../pages/Error404'));
 const Stock = lazy(() => import('../pages/Stock'));
 const LoginBoxed = lazy(() => import('../pages/LoginBoxed'));
-const Suppler = lazy(() => import('../pages/Suppler'));
+const Supplier = lazy(() => import('../pages/Supplier'));
 
 const routes = [
     // dashboard
@@ -14,7 +15,7 @@ const routes = [
     },
     {
         path: '/supplier',
-        element: <Suppler />,
+        element: <Supplier />,
     },
     {
         path: '/purchase',
@@ -22,7 +23,7 @@ const routes = [
     },
     {
         path: '/sale',
-        element: <Suppler />,
+        element: <Sale />,
     },
     // Data Tables
     {

@@ -12,7 +12,7 @@ import IconTrash from '../components/Icon/IconTrash';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 
-const Suppler = () => {
+const Supplier = () => {
     const dispatch = useDispatch();
     useEffect(() => {
         dispatch(setPageTitle('Supplier Form'));
@@ -400,4 +400,4 @@ const Suppler = () => {
     );
 };
 
-export default Suppler;
+export default Supplier;
