@@ -170,24 +170,6 @@ const Header = () => {
                                             </div>
                                         </div>
                                     </li>
-                                    <li>
-                                        <Link to="/users/profile" className="dark:hover:text-white">
-                                            <IconUser className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Profile
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to="/apps/mailbox" className="dark:hover:text-white">
-                                            <IconMail className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Inbox
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to="/auth/boxed-lockscreen" className="dark:hover:text-white">
-                                            <IconLockDots className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Lock Screen
-                                        </Link>
-                                    </li>
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         <Link to="/auth/boxed-signin" className="text-danger !py-3">
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />

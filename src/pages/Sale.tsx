@@ -314,6 +314,7 @@ const Sale = () => {
                             totalPrice: '',
                             payingAmount: '',
                             phoneNumber: '',
+                            billType: 'fake',
                         }}
                         validationSchema={saleSchema}
                         onSubmit={(values, { resetForm }) => {
@@ -375,8 +376,16 @@ const Sale = () => {
                                         <Field name="payingAmount" type="number" id="payingAmount" placeholder="Enter Paying Amount" className="form-input" />
                                         {submitCount > 0 && errors.payingAmount && <div className="text-danger mt-1">{errors.payingAmount}</div>}
                                     </div>
+                                    {/* Add Bill Type Dropdown */}
+                                    <div className={submitCount ? (errors.billType ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="billType">Bill Type *</label>
+                                        <Field as="select" name="billType" id="billType" className="form-select">
+                                            <option value="fake">Fake Bill</option>
+                                            <option value="perfect">Perfect Bill</option>
+                                        </Field>
+                                        {submitCount > 0 && errors.billType && <div className="text-danger mt-1">{errors.billType}</div>}
+                                    </div>
                                 </div>
-
                                 <div className="flex justify-end gap-4">
                                     {editMode && (
                                         <button

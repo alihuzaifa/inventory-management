@@ -7,6 +7,8 @@ import { IRootState } from '../../store';
 import { useEffect } from 'react';
 import IconCaretsDown from '../Icon/IconCaretsDown';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
+import IconUser from '../Icon/IconUser';
+import IconUserPlus from '../Icon/IconUserPlus';
 
 const Sidebar = () => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -71,7 +73,7 @@ const Sidebar = () => {
                             <li className="nav-item">
                                 <NavLink to="/supplier" className="group">
                                     <div className="flex items-center">
-                                        <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
+                                        <IconUserPlus className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Supplier')}</span>
                                     </div>
                                 </NavLink>
@@ -97,6 +99,14 @@ const Sidebar = () => {
                                     <div className="flex items-center">
                                         <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('sale')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            <li className="nav-item">
+                                <NavLink to="/khataUser" className="group">
+                                    <div className="flex items-center">
+                                        <IconUser className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Khata user')}</span>
                                     </div>
                                 </NavLink>
                             </li>
