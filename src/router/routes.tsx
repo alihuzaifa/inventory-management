@@ -8,6 +8,7 @@ const ERROR404 = lazy(() => import('../pages/Error404'));
 const Stock = lazy(() => import('../pages/Stock'));
 const LoginBoxed = lazy(() => import('../pages/LoginBoxed'));
 const Supplier = lazy(() => import('../pages/Supplier'));
+const SoftwareSetting = lazy(() => import('../pages/SoftwareSetting'));
 
 const routes = [
     // dashboard
@@ -39,6 +40,10 @@ const routes = [
     {
         path: '/khataUser',
         element: <KhataUser />,
+    },
+    {
+        path: '/setting',
+        element: <SoftwareSetting />,
     },
 
     {

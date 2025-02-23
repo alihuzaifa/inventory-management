@@ -9,6 +9,7 @@ import IconCaretsDown from '../Icon/IconCaretsDown';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconUser from '../Icon/IconUser';
 import IconUserPlus from '../Icon/IconUserPlus';
+import IconSettings from '../Icon/IconSettings';
 
 const Sidebar = () => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -115,6 +116,14 @@ const Sidebar = () => {
                                     <div className="flex items-center">
                                         <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Invoice')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            <li className="nav-item">
+                                <NavLink to="/setting" className="group">
+                                    <div className="flex items-center">
+                                        <IconSettings className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Setting')}</span>
                                     </div>
                                 </NavLink>
                             </li>

@@ -53,6 +53,12 @@ const Sale = () => {
             .matches(/^[0-9]+$/, 'Phone number must contain only digits')
             .min(11, 'Phone number must be at least 11 digits')
             .max(11, 'Phone number must not exceed 11 digits'),
+        paymentType: Yup.string().required('Payment type is required'),
+        checkNumber: Yup.string().when('paymentType', {
+            is: 'check',
+            then: (schema) => schema.required('Check number is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
     });
 
     // Sample sale data
@@ -315,6 +321,8 @@ const Sale = () => {
                             payingAmount: '',
                             phoneNumber: '',
                             billType: 'fake',
+                            paymentType: 'cash',
+                            checkNumber: '',
                         }}
                         validationSchema={saleSchema}
                         onSubmit={(values, { resetForm }) => {
@@ -385,6 +393,24 @@ const Sale = () => {
                                         </Field>
                                         {submitCount > 0 && errors.billType && <div className="text-danger mt-1">{errors.billType}</div>}
                                     </div>
+                                    <div className={submitCount ? (errors.paymentType ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="paymentType">Payment Type *</label>
+                                        <Field as="select" name="paymentType" id="paymentType" className="form-select">
+                                            <option value="cash">Cash</option>
+                                            <option value="bank">Bank Transfer</option>
+                                            <option value="check">Check</option>
+                                        </Field>
+                                        {submitCount > 0 && errors.paymentType && <div className="text-danger mt-1">{errors.paymentType}</div>}
+                                    </div>
+
+                                    {/* Conditional Check Number Field */}
+                                    {values.paymentType === 'check' && (
+                                        <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
+                                            <label htmlFor="checkNumber">Check Number *</label>
+                                            <Field name="checkNumber" type="text" id="checkNumber" placeholder="Enter check number" className="form-input" />
+                                            {submitCount > 0 && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex justify-end gap-4">
                                     {editMode && (

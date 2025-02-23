@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
 import IconPrinter from '../components/Icon/IconPrinter';
 import IconDownload from '../components/Icon/IconDownload';
+import InvoicePDF from '../components/InvoicePdf';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { IRootState } from '../store';
 
 const Invoice = () => {
     const dispatch = useDispatch();
@@ -39,6 +42,8 @@ const Invoice = () => {
         shopAddress: 'Shop # 8, Subhan Allah Market, Near MashaAllah Godown, Dargah Road, Kabari Bazar, Shershah Karachi.',
         shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
     };
+    
+    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
 
     return (
         <div>
@@ -47,82 +52,52 @@ const Invoice = () => {
                     <IconPrinter />
                     Print
                 </button>
-                <button type="button" className="btn btn-success gap-2">
-                    <IconDownload />
-                    Download
-                </button>
+                <PDFDownloadLink document={<InvoicePDF themeConfig={themeConfig} items={items} SoftwareDetail={SoftwareDetail} />} fileName="invoice.pdf">
+                    {({ loading }) => (
+                        <button type="button" className="btn btn-primary gap-2">
+                            <IconDownload />
+                            {loading ? 'Loading...' : 'Download PDF'}
+                        </button>
+                    )}
+                </PDFDownloadLink>
             </div>
 
             <div className="panel p-6">
-                <div className="flex justify-between flex-wrap gap-4">
-                    <div></div>
-                    <div className="text-2xl font-bold uppercase ml-10">{SoftwareDetail.shopName}</div>
-                    <div className="shrink-0">
-                        <img src="/assets/images/logo.svg" alt="Company Logo" className="w-14 ltr:ml-auto rtl:mr-auto" />
-                    </div>
-                </div>
+                <div className="text-2xl font-bold uppercase text-center">{SoftwareDetail.shopName}</div>
 
-                <div className="px-4">
-                    <div className="text-lg font-bold mt-6">Invoice</div>
-
-                    <div className="text-white-dark mt-2">
-                        Contact:
-                        <br />
-                        <span className="font-semibold">{SoftwareDetail.softwareName}: </span> {SoftwareDetail.number1} | {SoftwareDetail.number2}
-                        <br /> <span className="font-semibold">Azeem Badshah:</span> {SoftwareDetail.number3} | {SoftwareDetail.number4}
-                    </div>
+                <div className="text-white-dark mt-2 text-end">
+                    <span className="font-semibold">{SoftwareDetail.softwareName}: </span> {SoftwareDetail.number1} | {SoftwareDetail.number2}
+                    <br /> <span className="font-semibold">Azeem Badshah:</span> {SoftwareDetail.number3} | {SoftwareDetail.number4}
                 </div>
 
                 <hr className="border-white-light dark:border-[#1b2e4b] my-6" />
 
-                <div className="flex justify-between lg:flex-row flex-col gap-6 flex-wrap">
-                    <div className="flex-1">
-                        <div className="text-white-dark">
-                            <div>Issue For:</div>
-                            <div className="text-black dark:text-white font-semibold">John Doe</div>
-                            <div>405 Mulberry Rd. Mc Grady, NC, 28649</div>
-                            <div>redq@company.com</div>
-                            <div>(128) 666 070</div>
+                <div className="flex justify-between lg:flex-row flex-col gap-6">
+                    {/* Client Information */}
+                    <div className="lg:w-1/2">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="text-gray-600 dark:text-gray-400">Name:</div>
+                            <div className="font-semibold">Ali Huzaifa</div>
+
+                            <div className="text-gray-600 dark:text-gray-400">Phone Number:</div>
+                            <div className="font-semibold">0311 1260357</div>
+
+                            <div className="text-gray-600 dark:text-gray-400">Date:</div>
+                            <div className="font-semibold">13 Sep 2022</div>
                         </div>
                     </div>
+                    <div className="lg:w-1/2">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="text-gray-600 dark:text-gray-400">Invoice Number:</div>
+                            <div className="font-semibold">#8701</div>
 
-                    <div className="flex justify-between sm:flex-row flex-col gap-6 lg:w-2/3">
-                        <div className="xl:1/3 lg:w-2/5 sm:w-1/2">
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Invoice :</div>
-                                <div>#8701</div>
+                            <div className="text-gray-600 dark:text-gray-400">Payment Status:</div>
+                            <div className="font-semibold">
+                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Fully Paid</span>
                             </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Issue Date :</div>
-                                <div>13 Sep 2022</div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Order ID :</div>
-                                <div>#OD-85794</div>
-                            </div>
-                            <div className="flex items-center w-full justify-between">
-                                <div className="text-white-dark">Shipment ID :</div>
-                                <div>#SHP-8594</div>
-                            </div>
-                        </div>
 
-                        <div className="xl:1/3 lg:w-2/5 sm:w-1/2">
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Bank Name:</div>
-                                <div className="whitespace-nowrap">Bank Of America</div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Account Number:</div>
-                                <div>1234567890</div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">SWIFT Code:</div>
-                                <div>S58K796</div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">IBAN:</div>
-                                <div>L5698445485</div>
-                            </div>
+                            <div className="text-gray-600 dark:text-gray-400">Payment Method:</div>
+                            <div className="font-semibold">Bank Transfer</div>
                         </div>
                     </div>
                 </div>
