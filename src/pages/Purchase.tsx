@@ -11,8 +11,9 @@ import IconTrash from '../components/Icon/IconTrash';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import { downloadExcel } from 'react-export-table-to-excel';
-const col = ['id', 'supplierName', 'product', 'quantity', 'totalPrice', 'payingAmount', 'remainingAmount', 'purchaseDate', 'paymentStatus'];
-const header = ['Id', 'Supplier', 'Product', 'Quantity', 'Total Price', 'Paying Amount', 'Remaining Amount', 'Purchase Date', 'Payment Status'];
+const col = ['id', 'supplier', 'product', 'quantity', 'price', 'totalPrice', 'purchaseDate'];
+const header = ['Id', 'Supplier', 'Product', 'Quantity', 'Price', 'Total Price', 'Purchase Date'];
+
 const Purchase = () => {
     const dispatch = useDispatch();
     useEffect(() => {
@@ -43,42 +44,21 @@ const Purchase = () => {
     };
 
     const purchaseSchema = Yup.object().shape({
-        supplierId: Yup.string().required('Supplier is required'),
+        supplier: Yup.string(), // Optional supplier
         product: Yup.string().required('Product name is required'),
         quantity: Yup.number().required('Quantity is required').positive('Quantity must be positive'),
-        totalPrice: Yup.number().required('Total price is required').positive('Price must be positive'),
-        payingAmount: Yup.number()
-            .required('Paying amount is required')
-            .min(0, 'Paying amount cannot be negative')
-            .test('max', 'Paying amount cannot exceed total price', function (value) {
-                return !value || value <= this.parent.totalPrice;
-            }),
+        price: Yup.number().required('Price is required').positive('Price must be positive'),
     });
     // Sample purchase data
     const rowData = [
         {
             id: 1,
-            supplierId: 1,
-            supplierName: 'Ali Trading Company',
+            supplier: 'Ali Trading Company',
             product: 'LED TV',
             quantity: 5,
+            price: 50000,
             totalPrice: 250000,
-            payingAmount: 250000,
-            remainingAmount: 0,
             purchaseDate: '2024-01-15',
-            paymentStatus: 'paid',
-        },
-        {
-            id: 2,
-            supplierId: 2,
-            supplierName: 'Karachi Electronics',
-            product: 'Laptop',
-            quantity: 3,
-            totalPrice: 450000,
-            payingAmount: 200000,
-            remainingAmount: 250000,
-            purchaseDate: '2024-01-16',
-            paymentStatus: 'partially paid',
         },
     ];
 
@@ -143,11 +123,11 @@ const Purchase = () => {
         if (purchase) {
             if (formikRef.current) {
                 formikRef.current.setValues({
-                    supplierId: purchase.supplierId,
+                    supplier: purchase.supplier,
                     product: purchase.product,
                     quantity: purchase.quantity,
+                    price: purchase.price,
                     totalPrice: purchase.totalPrice,
-                    paymentStatus: purchase.paymentStatus,
                 });
             }
             setEditMode(true);
@@ -170,15 +150,6 @@ const Purchase = () => {
                 Swal.fire('Deleted!', 'Purchase has been deleted.', 'success');
             }
         });
-    };
-
-    const getStatusBadge = (status: string) => {
-        const badges = {
-            paid: <span>Paid</span>,
-            'partially paid': <span>Partially Paid</span>,
-            unpaid: <span>Unpaid</span>,
-        };
-        return badges[status as keyof typeof badges] || status;
     };
 
     const exportTable = (type: string) => {
@@ -204,10 +175,8 @@ const Purchase = () => {
                         result += coldelimiter;
                     }
                     let val = item[d] ? item[d] : '';
-                    if (d === 'totalPrice' || d === 'payingAmount') {
+                    if (d === 'price' || d === 'totalPrice') {
                         val = `Rs. ${val.toLocaleString()}`;
-                    } else if (d === 'remainingAmount') {
-                        val = `Rs. ${(item.totalPrice - (item.payingAmount || 0)).toLocaleString()}`;
                     } else if (d === 'purchaseDate') {
                         val = formatDate(val);
                     }
@@ -243,10 +212,8 @@ const Purchase = () => {
                 rowhtml += '<tr>';
                 columns.map((d: any) => {
                     let val = item[d] ? item[d] : '';
-                    if (d === 'totalPrice' || d === 'payingAmount') {
+                    if (d === 'price' || d === 'totalPrice') {
                         val = `Rs. ${val.toLocaleString()}`;
-                    } else if (d === 'remainingAmount') {
-                        val = `Rs. ${(item.totalPrice - (item.payingAmount || 0)).toLocaleString()}`;
                     } else if (d === 'purchaseDate') {
                         val = formatDate(val);
                     }
@@ -268,12 +235,12 @@ const Purchase = () => {
     function handleDownloadExcel() {
         const excelData = rowData.map((item) => ({
             ID: item.id,
-            Supplier: item.supplierName,
+            Supplier: item.supplier,
             Product: item.product,
             Quantity: item.quantity,
+            Price: `Rs. ${item.price.toLocaleString()}`,
             'Total Price': `Rs. ${item.totalPrice.toLocaleString()}`,
             'Purchase Date': formatDate(item.purchaseDate),
-            'Payment Status': item.paymentStatus,
         }));
 
         downloadExcel({
@@ -294,43 +261,26 @@ const Purchase = () => {
                     <Formik
                         innerRef={formikRef}
                         initialValues={{
-                            supplierId: '',
+                            supplier: '',
                             product: '',
                             quantity: '',
+                            price: '',
                             totalPrice: '',
-                            payingAmount: '',
-                            paymentStatus: '',
                         }}
                         validationSchema={purchaseSchema}
                         onSubmit={(values, { resetForm }) => {
-                            const remainingAmount = Number(values.totalPrice) - Number(values.payingAmount);
-                            let status = 'unpaid';
-                            if (remainingAmount === 0) {
-                                status = 'paid';
-                            } else if (Number(values.payingAmount) > 0) {
-                                status = 'partially paid';
-                            }
-                            values.paymentStatus = status;
                             console.log(values);
                             submitForm();
                             resetForm();
                             setEditMode(false);
                         }}
                     >
-                        {({ errors, submitCount, values }) => (
+                        {({ errors, submitCount, values, setFieldValue }) => (
                             <Form className="space-y-5">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div className={submitCount ? (errors.supplierId ? 'has-error' : 'has-success') : ''}>
-                                        <label htmlFor="supplierId">Supplier *</label>
-                                        <Field as="select" name="supplierId" id="supplierId" className="form-select">
-                                            <option value="">Select Supplier</option>
-                                            {suppliers.map((supplier) => (
-                                                <option key={supplier.id} value={supplier.id}>
-                                                    {supplier.name}
-                                                </option>
-                                            ))}
-                                        </Field>
-                                        {submitCount > 0 && errors.supplierId && <div className="text-danger mt-1">{errors.supplierId}</div>}
+                                    <div>
+                                        <label htmlFor="supplier">Supplier</label>
+                                        <Field name="supplier" type="text" id="supplier" placeholder="Enter Supplier Name" className="form-input" />
                                     </div>
 
                                     <div className={submitCount ? (errors.product ? 'has-error' : 'has-success') : ''}>
@@ -341,46 +291,44 @@ const Purchase = () => {
 
                                     <div className={submitCount ? (errors.quantity ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="quantity">Quantity *</label>
-                                        <Field name="quantity" type="number" id="quantity" placeholder="Enter Quantity" className="form-input" />
+                                        <Field
+                                            name="quantity"
+                                            type="number"
+                                            id="quantity"
+                                            placeholder="Enter Quantity"
+                                            className="form-input"
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                setFieldValue('quantity', e.target.value);
+                                                if (values.price) {
+                                                    setFieldValue('totalPrice', Number(e.target.value) * Number(values.price));
+                                                }
+                                            }}
+                                        />
                                         {submitCount > 0 && errors.quantity && <div className="text-danger mt-1">{errors.quantity}</div>}
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div className={submitCount ? (errors.totalPrice ? 'has-error' : 'has-success') : ''}>
-                                        <label htmlFor="totalPrice">Total Price *</label>
-                                        <Field name="totalPrice" type="number" id="totalPrice" placeholder="Enter Total Price" className="form-input" />
-                                        {submitCount > 0 && errors.totalPrice && <div className="text-danger mt-1">{errors.totalPrice}</div>}
-                                    </div>
-
-                                    <div className={submitCount ? (errors.payingAmount ? 'has-error' : 'has-success') : ''}>
-                                        <label htmlFor="payingAmount">Paying Amount *</label>
-                                        <Field name="payingAmount" type="number" id="payingAmount" placeholder="Enter Paying Amount" className="form-input" />
-                                        {submitCount > 0 && errors.payingAmount && <div className="text-danger mt-1">{errors.payingAmount}</div>}
+                                    <div className={submitCount ? (errors.price ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="price">Price *</label>
+                                        <Field
+                                            name="price"
+                                            type="number"
+                                            id="price"
+                                            placeholder="Enter Price"
+                                            className="form-input"
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                setFieldValue('price', e.target.value);
+                                                if (values.quantity) {
+                                                    setFieldValue('totalPrice', Number(e.target.value) * Number(values.quantity));
+                                                }
+                                            }}
+                                        />
+                                        {submitCount > 0 && errors.price && <div className="text-danger mt-1">{errors.price}</div>}
                                     </div>
 
                                     <div>
-                                        <label htmlFor="paymentStatus">Payment Status</label>
-                                        <Field
-                                            as="select"
-                                            name="paymentStatus"
-                                            id="paymentStatus"
-                                            className="form-select"
-                                            disabled
-                                            value={
-                                                values.totalPrice && values.payingAmount
-                                                    ? values.payingAmount === values.totalPrice
-                                                        ? 'paid'
-                                                        : Number(values.payingAmount) > 0
-                                                        ? 'partially paid'
-                                                        : 'unpaid'
-                                                    : ''
-                                            }
-                                        >
-                                            <option value="">Select Status</option>
-                                            <option value="paid">Paid</option>
-                                            <option value="partially paid">Partially Paid</option>
-                                            <option value="unpaid">Unpaid</option>
-                                        </Field>
+                                        <label htmlFor="totalPrice">Total Price</label>
+                                        <Field name="totalPrice" type="number" id="totalPrice" placeholder="Total Price" className="form-input" disabled />
                                     </div>
                                 </div>
                                 <div className="flex justify-end">
@@ -435,9 +383,15 @@ const Purchase = () => {
                         records={recordsData}
                         columns={[
                             { accessor: 'id', title: '#', sortable: true },
-                            { accessor: 'supplierName', title: 'Supplier', sortable: true },
+                            { accessor: 'supplier', title: 'Supplier', sortable: true },
                             { accessor: 'product', title: 'Product', sortable: true },
                             { accessor: 'quantity', title: 'Quantity', sortable: true },
+                            {
+                                accessor: 'price',
+                                title: 'Price',
+                                sortable: true,
+                                render: ({ price }) => `Rs. ${price.toLocaleString()}`,
+                            },
                             {
                                 accessor: 'totalPrice',
                                 title: 'Total Price',
@@ -445,28 +399,10 @@ const Purchase = () => {
                                 render: ({ totalPrice }) => `Rs. ${totalPrice.toLocaleString()}`,
                             },
                             {
-                                accessor: 'payingAmount',
-                                title: 'Paying Amount',
-                                sortable: true,
-                                render: ({ payingAmount }) => `Rs. ${payingAmount?.toLocaleString() || '0'}`,
-                            },
-                            {
-                                accessor: 'remainingAmount',
-                                title: 'Remaining Amount',
-                                sortable: true,
-                                render: ({ totalPrice, payingAmount }) => `Rs. ${(totalPrice - (payingAmount || 0)).toLocaleString()}`,
-                            },
-                            {
                                 accessor: 'purchaseDate',
                                 title: 'Purchase Date',
                                 sortable: true,
                                 render: ({ purchaseDate }) => formatDate(purchaseDate),
-                            },
-                            {
-                                accessor: 'paymentStatus',
-                                title: 'Payment Status',
-                                sortable: true,
-                                render: ({ paymentStatus }) => getStatusBadge(paymentStatus),
                             },
                             {
                                 accessor: 'actions',

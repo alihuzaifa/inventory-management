@@ -7,7 +7,6 @@ const Purchase = lazy(() => import('../pages/Purchase'));
 const ERROR404 = lazy(() => import('../pages/Error404'));
 const Stock = lazy(() => import('../pages/Stock'));
 const LoginBoxed = lazy(() => import('../pages/LoginBoxed'));
-const Supplier = lazy(() => import('../pages/Supplier'));
 const SoftwareSetting = lazy(() => import('../pages/SoftwareSetting'));
 
 const routes = [
@@ -15,10 +14,6 @@ const routes = [
     {
         path: '/',
         element: <Index />,
-    },
-    {
-        path: '/supplier',
-        element: <Supplier />,
     },
     {
         path: '/purchase',
