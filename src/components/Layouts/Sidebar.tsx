@@ -10,6 +10,7 @@ import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconUser from '../Icon/IconUser';
 import IconUserPlus from '../Icon/IconUserPlus';
 import IconSettings from '../Icon/IconSettings';
+import IconDollarSign from '../Icon/IconDollarSign';
 
 const Sidebar = () => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -96,10 +97,10 @@ const Sidebar = () => {
                                 </NavLink>
                             </li>
                             <li className="nav-item">
-                                <NavLink to="/khataUser" className="group">
+                                <NavLink to="/user" className="group">
                                     <div className="flex items-center">
                                         <IconUser className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Khata user')}</span>
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('User')}</span>
                                     </div>
                                 </NavLink>
                             </li>
@@ -108,6 +109,30 @@ const Sidebar = () => {
                                     <div className="flex items-center">
                                         <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Invoice')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            <li className="nav-item">
+                                <NavLink to="/khata-sale" className="group">
+                                    <div className="flex items-center">
+                                        <IconDollarSign className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Khata Sale')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            <li className="nav-item">
+                                <NavLink to="/khata-history" className="group">
+                                    <div className="flex items-center">
+                                        <IconDollarSign className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Khata History')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            <li className="nav-item">
+                                <NavLink to="/expense" className="group">
+                                    <div className="flex items-center">
+                                        <IconDollarSign className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Expense')}</span>
                                     </div>
                                 </NavLink>
                             </li>

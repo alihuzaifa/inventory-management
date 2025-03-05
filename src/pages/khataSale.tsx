@@ -4,10 +4,15 @@ import { Field, Form, Formik } from 'formik';
 import Swal from 'sweetalert2';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
-import { DataTableSortStatus } from 'mantine-datatable';
-import { sortBy } from 'lodash';
 
-interface SaleFormValues {
+interface Customer {
+    id: number;
+    name: string;
+    phoneNumber: string;
+}
+
+interface KhataSaleFormValues {
+    customerId: string;
     customerName: string;
     product: string;
     availableQuantity: string;
@@ -15,7 +20,7 @@ interface SaleFormValues {
     price: string;
     totalPrice: string;
     phoneNumber: string;
-    billType: 'fake' | 'real'; // Adjust this based on your options
+    billType: 'fake' | 'real';
     paymentTypes: string[];
     cashAmount: string;
     bankAmount: string;
@@ -24,14 +29,21 @@ interface SaleFormValues {
     checkNumber: string;
 }
 
-const Invoice = () => {
+const KhataSale = () => {
     const dispatch = useDispatch();
     useEffect(() => {
-        dispatch(setPageTitle('Sale Form'));
+        dispatch(setPageTitle('Khata Sale Form'));
     }, []);
 
     const [editMode, setEditMode] = useState(false);
     const formikRef = useRef<any>(null);
+
+    // Sample customers data
+    const customers: Customer[] = [
+        { id: 1, name: 'John Doe', phoneNumber: '03001234567' },
+        { id: 2, name: 'Jane Smith', phoneNumber: '03009876543' },
+        { id: 3, name: 'Alice Johnson', phoneNumber: '03331234567' },
+    ];
 
     const submitForm = () => {
         const toast = Swal.mixin({
@@ -42,13 +54,13 @@ const Invoice = () => {
         });
         toast.fire({
             icon: 'success',
-            title: 'Sale added successfully',
+            title: 'Khata Sale added successfully',
             padding: '10px 20px',
         });
     };
 
     const saleSchema = Yup.object().shape({
-        customerName: Yup.string().required('Customer name is required'),
+        customerId: Yup.string().required('Customer selection is required'),
         product: Yup.string().required('Product name is required'),
         availableQuantity: Yup.number().required('Available quantity is required'),
         sellingQuantity: Yup.number()
@@ -91,93 +103,6 @@ const Invoice = () => {
         }),
     });
 
-    // Sample sale data
-    const rowData = [
-        {
-            id: 1,
-            customerName: 'John Doe',
-            product: 'LED TV',
-            quantity: 1,
-            totalPrice: 50000,
-            remainingAmount: 0,
-            phoneNumber: '03001234567',
-            saleDate: '2024-01-15',
-        },
-        {
-            id: 2,
-            customerName: 'Jane Smith',
-            product: 'Laptop',
-            quantity: 1,
-            totalPrice: 150000,
-            remainingAmount: 50000,
-            phoneNumber: '03009876543',
-            saleDate: '2024-01-16',
-        },
-    ];
-
-    // Table configuration
-    const [page, setPage] = useState(1);
-    const PAGE_SIZES = [10, 20, 30, 50, 100];
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState(sortBy(rowData, 'id'));
-    const [recordsData, setRecordsData] = useState(initialRecords);
-    const [search, setSearch] = useState('');
-    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
-
-    useEffect(() => {
-        const filteredData = rowData.filter((item: any) => {
-            const searchLower = search.toLowerCase();
-            return (
-                item.id.toString().includes(searchLower) ||
-                item.customerName.toLowerCase().includes(searchLower) ||
-                item.product.toLowerCase().includes(searchLower) ||
-                item.quantity.toString().includes(searchLower) ||
-                item.totalPrice.toString().includes(searchLower) ||
-                (item.phoneNumber && item.phoneNumber.includes(searchLower)) ||
-                formatDate(item.saleDate).includes(searchLower)
-            );
-        });
-
-        const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
-        const sorted = sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData;
-
-        setInitialRecords(sorted);
-
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize;
-        setRecordsData(sorted.slice(from, to));
-    }, [search, sortStatus, page, pageSize]);
-
-    useEffect(() => {
-        setPage(1);
-    }, [pageSize]);
-
-    useEffect(() => {
-        const data = sortBy(initialRecords, sortStatus.columnAccessor);
-        const sorted = sortStatus.direction === 'desc' ? data.reverse() : data;
-        setInitialRecords(sorted);
-
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize;
-        setRecordsData(sorted.slice(from, to));
-    }, [sortStatus]);
-
-    useEffect(() => {
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize;
-        setRecordsData(initialRecords.slice(from, to));
-    }, [page, pageSize, initialRecords]);
-
-    const formatDate = (date: string) => {
-        if (date) {
-            const dt = new Date(date);
-            const month = dt.getMonth() + 1 < 10 ? '0' + (dt.getMonth() + 1) : dt.getMonth() + 1;
-            const day = dt.getDate() < 10 ? '0' + dt.getDate() : dt.getDate();
-            return day + '/' + month + '/' + dt.getFullYear();
-        }
-        return '';
-    };
-
     const products = [
         { id: 1, name: 'LED TV', quantities: [500, 100, 1000] },
         { id: 2, name: 'Laptop', quantities: [50, 100, 200] },
@@ -189,10 +114,11 @@ const Invoice = () => {
         <>
             <div className="panel">
                 <div className="mb-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light mb-4">{editMode ? 'Edit Invoice' : 'Add Invoice'}</h5>
-                    <Formik<SaleFormValues>
+                    <h5 className="font-semibold text-lg dark:text-white-light mb-4">{editMode ? 'Edit Khata Sale' : 'Add Khata Sale'}</h5>
+                    <Formik<KhataSaleFormValues>
                         innerRef={formikRef}
                         initialValues={{
+                            customerId: '',
                             customerName: '',
                             product: '',
                             availableQuantity: '',
@@ -218,15 +144,33 @@ const Invoice = () => {
                         {({ errors, submitCount, values, setFieldValue }) => (
                             <Form className="space-y-5">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div className={submitCount ? (errors.customerName ? 'has-error' : 'has-success') : ''}>
-                                        <label htmlFor="customerName">Customer Name *</label>
-                                        <Field name="customerName" type="text" id="customerName" placeholder="Enter Customer Name" className="form-input" />
-                                        {submitCount > 0 && errors.customerName && <div className="text-danger mt-1">{errors.customerName}</div>}
+                                    <div className={submitCount ? (errors.customerId ? 'has-error' : 'has-success') : ''}>
+                                        <label htmlFor="customerId">Select Customer *</label>
+                                        <Field
+                                            as="select"
+                                            name="customerId"
+                                            id="customerId"
+                                            className="form-select"
+                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                const selectedCustomer = customers.find((c) => c.id === parseInt(e.target.value));
+                                                setFieldValue('customerId', e.target.value);
+                                                setFieldValue('customerName', selectedCustomer?.name || '');
+                                                setFieldValue('phoneNumber', selectedCustomer?.phoneNumber || '');
+                                            }}
+                                        >
+                                            <option value="">Select Customer</option>
+                                            {customers.map((customer) => (
+                                                <option key={customer.id} value={customer.id}>
+                                                    {customer.name}
+                                                </option>
+                                            ))}
+                                        </Field>
+                                        {submitCount > 0 && errors.customerId && <div className="text-danger mt-1">{errors.customerId}</div>}
                                     </div>
 
                                     <div className={submitCount ? (errors.phoneNumber ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="phoneNumber">Phone Number</label>
-                                        <Field name="phoneNumber" type="text" id="phoneNumber" placeholder="Enter Phone Number" className="form-input" />
+                                        <Field name="phoneNumber" type="text" id="phoneNumber" placeholder="Enter Phone Number" className="form-input" disabled />
                                         {submitCount > 0 && errors.phoneNumber && <div className="text-danger mt-1">{errors.phoneNumber}</div>}
                                     </div>
 
@@ -328,6 +272,9 @@ const Invoice = () => {
                                             </div>
                                         </>
                                     )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                     <div className={submitCount ? (errors.billType ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="billType">Bill Type *</label>
                                         <Field as="select" name="billType" id="billType" className="form-select">
@@ -355,6 +302,7 @@ const Invoice = () => {
                                         {submitCount > 0 && errors.paymentTypes && <div className="text-danger mt-1">{errors.paymentTypes}</div>}
                                     </div>
                                 </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                     {values.paymentTypes.includes('cash') && (
                                         <div className={`w-full ${submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}`}>
@@ -379,7 +327,7 @@ const Invoice = () => {
                                         </>
                                     )}
 
-                                    {values.paymentTypes?.includes('check') && (
+                                    {values.paymentTypes.includes('check') && (
                                         <>
                                             <div className={`w-full ${submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}`}>
                                                 <label htmlFor="checkNumber">Check Number *</label>
@@ -409,7 +357,7 @@ const Invoice = () => {
                                         </button>
                                     )}
                                     <button type="submit" className="btn btn-primary">
-                                        {editMode ? 'Update Invoice' : 'Add Invoice'}
+                                        {editMode ? 'Update Khata Sale' : 'Add Khata Sale'}
                                     </button>
                                 </div>
                             </Form>
@@ -421,4 +369,4 @@ const Invoice = () => {
     );
 };
 
-export default Invoice;
+export default KhataSale;
