@@ -70,18 +70,18 @@ const Purchase = () => {
     const [recordsData, setRecordsData] = useState(initialRecords);
     const [search, setSearch] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
+
     useEffect(() => {
         const filteredData = rowData.filter((item: any) => {
             const searchLower = search.toLowerCase();
             return (
                 item.id.toString().includes(searchLower) ||
-                item.supplierName.toLowerCase().includes(searchLower) ||
+                item.supplier.toLowerCase().includes(searchLower) || // Changed from supplierName
                 item.product.toLowerCase().includes(searchLower) ||
                 item.quantity.toString().includes(searchLower) ||
+                item.price.toString().includes(searchLower) || // Added price search
                 item.totalPrice.toString().includes(searchLower) ||
-                (item.payingAmount && item.payingAmount.toString().includes(searchLower)) ||
-                formatDate(item.purchaseDate).includes(searchLower) ||
-                item.paymentStatus.toLowerCase().includes(searchLower)
+                formatDate(item.purchaseDate).toLowerCase().includes(searchLower) // Added toLowerCase()
             );
         });
 
