@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, useEffect, useRef, useState } from 'react';
 import * as Yup from 'yup';
 import { Field, Form, Formik } from 'formik';
 import Swal from 'sweetalert2';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
-import { DataTableSortStatus } from 'mantine-datatable';
+import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { sortBy } from 'lodash';
+const InvoicePdf = lazy(() => import('./Invoice'));
 
 interface SaleFormValues {
     customerName: string;
@@ -33,7 +34,29 @@ const Invoice = () => {
     const [editMode, setEditMode] = useState(false);
     const formikRef = useRef<any>(null);
 
-    const submitForm = () => {
+    const submitForm = (values: SaleFormValues) => {
+        // Create new record
+        const newRecord = {
+            id: initialRecords.length + 1, // Or generate a unique ID
+            ...values,
+            saleDate: new Date().toISOString(),
+        };
+        // Add to records
+        setInitialRecords([...initialRecords, {
+            ...newRecord,
+            availableQuantity: Number(newRecord.availableQuantity),
+            sellingQuantity: Number(newRecord.sellingQuantity), 
+            price: Number(newRecord.price),
+            totalPrice: Number(newRecord.totalPrice),
+            cashAmount: Number(newRecord.cashAmount),
+            bankAmount: Number(newRecord.bankAmount),
+            checkAmount: Number(newRecord.checkAmount)
+        }]);
+
+        // Show success message
+        const toast = Swal.mixin({
+            toast: true,
+        // Show success message
         const toast = Swal.mixin({
             toast: true,
             position: 'top',
@@ -91,27 +114,42 @@ const Invoice = () => {
         }),
     });
 
-    // Sample sale data
     const rowData = [
         {
             id: 1,
-            customerName: 'John Doe',
+            customerName: 'Ali',
+            phoneNumber: '92324924796',
             product: 'LED TV',
-            quantity: 1,
-            totalPrice: 50000,
-            remainingAmount: 0,
-            phoneNumber: '03001234567',
-            saleDate: '2024-01-15',
+            availableQuantity: 100,
+            sellingQuantity: 12,
+            price: 12,
+            totalPrice: 144,
+            billType: 'Perfect Bill',
+            paymentTypes: ['Cash', 'Bank Transfer', 'Check'],
+            cashAmount: 12,
+            bankName: 'Bank Al Habib',
+            bankAmount: 1222,
+            checkNumber: '1010101010',
+            checkAmount: 20000,
+            saleDate: new Date().toISOString(),
         },
         {
             id: 2,
-            customerName: 'Jane Smith',
+            customerName: 'Ahmed',
+            phoneNumber: '92324924797',
             product: 'Laptop',
-            quantity: 1,
-            totalPrice: 150000,
-            remainingAmount: 50000,
-            phoneNumber: '03009876543',
-            saleDate: '2024-01-16',
+            availableQuantity: 50,
+            sellingQuantity: 5,
+            price: 1500,
+            totalPrice: 7500,
+            billType: 'Perfect Bill',
+            paymentTypes: ['Cash', 'Bank Transfer'],
+            cashAmount: 3500,
+            bankName: 'Meezan Bank',
+            bankAmount: 4000,
+            checkNumber: '',
+            checkAmount: 0,
+            saleDate: new Date().toISOString(),
         },
     ];
 
@@ -119,7 +157,7 @@ const Invoice = () => {
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState(sortBy(rowData, 'id'));
+    const [initialRecords, setInitialRecords] = useState<any[]>(sortBy(rowData, 'id'));
     const [recordsData, setRecordsData] = useState(initialRecords);
     const [search, setSearch] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
@@ -185,6 +223,44 @@ const Invoice = () => {
         { id: 4, name: 'Refrigerator', quantities: [50, 75, 100] },
     ];
 
+    const handleEdit = (row: any) => {
+        setEditMode(true);
+        formikRef.current?.setValues({
+            customerName: row.customerName,
+            product: row.product,
+            availableQuantity: row.quantity, // You might want to adjust this based on your needs
+            sellingQuantity: row.quantity,
+            price: row.totalPrice / row.quantity,
+            totalPrice: row.totalPrice,
+            phoneNumber: row.phoneNumber,
+            billType: 'fake', // Set default or get from row data
+            paymentTypes: [], // Set default or get from row data
+            cashAmount: '',
+            bankAmount: '',
+            bankName: '',
+            checkAmount: '',
+            checkNumber: '',
+        });
+    };
+    const handleDelete = (row: any) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            customClass: {
+                container: 'sweet-alerts',
+            },
+            confirmButtonText: 'Delete',
+            padding: '2em',
+        }).then((result) => {
+            if (result.value) {
+                // Add your delete logic here
+                Swal.fire('Deleted!', 'The invoice has been deleted.', 'success');
+            }
+        });
+    };
+
     return (
         <>
             <div className="panel">
@@ -210,7 +286,7 @@ const Invoice = () => {
                         }}
                         validationSchema={saleSchema}
                         onSubmit={(values, { resetForm }) => {
-                            submitForm();
+                            submitForm(values);
                             resetForm();
                             setEditMode(false);
                         }}
@@ -415,6 +491,93 @@ const Invoice = () => {
                             </Form>
                         )}
                     </Formik>
+                </div>
+            </div>
+            {/* Add DataTable Panel */}
+            <div className="panel mt-6">
+                <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
+                    <h5 className="font-semibold text-lg dark:text-white-light">Invoice List</h5>
+                    <div className="ltr:ml-auto rtl:mr-auto">
+                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    </div>
+                </div>
+                <div className="datatables">
+                    <DataTable
+                        records={recordsData}
+                        columns={[
+                            { accessor: 'id', title: 'ID', sortable: true },
+                            { accessor: 'customerName', title: 'Customer Name', sortable: true },
+                            { accessor: 'phoneNumber', title: 'Phone Number', sortable: true },
+                            { accessor: 'product', title: 'Product', sortable: true },
+                            { accessor: 'sellingQuantity', title: 'Quantity', sortable: true },
+                            { accessor: 'price', title: 'Price', sortable: true },
+                            { accessor: 'totalPrice', title: 'Total Price', sortable: true },
+                            { accessor: 'billType', title: 'Bill Type', sortable: true },
+                            {
+                                accessor: 'paymentTypes',
+                                title: 'Payment Types',
+                                sortable: true,
+                                render: ({ paymentTypes }) => (
+                                    <div className="flex flex-wrap gap-1">
+                                        {paymentTypes.map((type: string) => (
+                                            <span key={type} className="badge badge-outline-primary">
+                                                {type}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ),
+                            },
+                            {
+                                accessor: 'paymentDetails',
+                                title: 'Payment Details',
+                                render: ({ cashAmount, bankName, bankAmount, checkNumber, checkAmount }) => (
+                                    <div className="text-sm">
+                                        {cashAmount > 0 && <div>Cash: ${cashAmount}</div>}
+                                        {bankAmount > 0 && (
+                                            <div>
+                                                Bank: {bankName} (${bankAmount})
+                                            </div>
+                                        )}
+                                        {checkAmount > 0 && (
+                                            <div>
+                                                Check: #{checkNumber} (${checkAmount})
+                                            </div>
+                                        )}
+                                    </div>
+                                ),
+                            },
+                            {
+                                accessor: 'saleDate',
+                                title: 'Sale Date',
+                                sortable: true,
+                                render: ({ saleDate }) => <div>{formatDate(saleDate)}</div>,
+                            },
+                            {
+                                accessor: 'actions',
+                                title: 'Actions',
+                                render: (row) => (
+                                    <div className="flex gap-2">
+                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleEdit(row)}>
+                                            Edit
+                                        </button>
+                                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(row)}>
+                                            Delete
+                                        </button>
+                                    </div>
+                                ),
+                            },
+                        ]}
+                        totalRecords={initialRecords.length}
+                        recordsPerPage={pageSize}
+                        page={page}
+                        onPageChange={(p) => setPage(p)}
+                        recordsPerPageOptions={PAGE_SIZES}
+                        onRecordsPerPageChange={setPageSize}
+                        sortStatus={sortStatus}
+                        onSortStatusChange={setSortStatus}
+                        minHeight={200}
+                        paginationText={({ from, to, totalRecords }) => `Showing ${from} to ${to} of ${totalRecords} entries`}
+                    />
                 </div>
             </div>
         </>

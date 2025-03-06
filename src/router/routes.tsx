@@ -4,7 +4,7 @@ const Expense = lazy(() => import('../pages/expense'));
 const KhataHistory = lazy(() => import('../pages/khataHistory'));
 const KhataSale = lazy(() => import('../pages/khataSale'));
 const InvoiceHistory = lazy(() => import('../pages/invoiceHistory'));
-const Invoice = lazy(() => import('../pages/Invoice'));
+// const Invoice = lazy(() => import('../pages/Invoice'));
 const User = lazy(() => import('../pages/user'));
 const Sale = lazy(() => import('../pages/Sale'));
 const Purchase = lazy(() => import('../pages/Purchase'));
@@ -32,10 +32,10 @@ const routes = [
         path: '/stock',
         element: <Stock />,
     },
-    {
-        path: '/invoice',
-        element: <Invoice />,
-    },
+    // {
+    //     path: '/invoice',
+    //     element: <Invoice />,
+    // },
     {
         path: '/user',
         element: <User />,
