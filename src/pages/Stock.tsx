@@ -62,33 +62,50 @@ const Stock = () => {
     useEffect(() => {
         const filteredData = rowData.filter((item) => {
             const searchTerm = search.toLowerCase();
-    
-            const matchesSearch =
+            const formattedPurchaseDate = formatDate(item.lastPurchaseDate).toLowerCase();
+
+            // Format prices for searching
+            const formattedTotalPrice = `Rs. ${item.totalPrice.toLocaleString()}`.toLowerCase();
+
+            // Search in main item
+            const mainItemMatches =
                 searchTerm === '' ||
                 item.id.toString().includes(searchTerm) ||
                 item.product.toLowerCase().includes(searchTerm) ||
                 item.totalQuantity.toString().includes(searchTerm) ||
-                item.totalPrice.toString().includes(searchTerm) ||
-                item.lastPurchaseDate.includes(searchTerm) ||
-                item.stocks.some((stock) => stock.supplier.toLowerCase().includes(searchTerm)); // Check suppliers
-    
-            const matchesSupplier =
-                selectedSupplier === 'all' || item.stocks.some((stock) => stock.supplier === selectedSupplier);
-    
-            return matchesSearch && matchesSupplier;
+                formattedTotalPrice.includes(searchTerm) ||
+                formattedPurchaseDate.includes(searchTerm);
+
+            // Search in stocks array
+            const stockMatches = item.stocks.some((stock) => {
+                const formattedStockPrice = `Rs. ${stock.price.toLocaleString()}`.toLowerCase();
+                const formattedStockTotalPrice = `Rs. ${(stock.price * stock.quantity).toLocaleString()}`.toLowerCase();
+                const formattedStockDate = formatDate(stock.date).toLowerCase();
+
+                return (
+                    stock.supplier.toLowerCase().includes(searchTerm) ||
+                    stock.quantity.toString().includes(searchTerm) ||
+                    formattedStockPrice.includes(searchTerm) ||
+                    formattedStockTotalPrice.includes(searchTerm) ||
+                    formattedStockDate.includes(searchTerm)
+                );
+            });
+
+            const matchesSupplier = selectedSupplier === 'all' || item.stocks.some((stock) => stock.supplier === selectedSupplier);
+
+            return (mainItemMatches || stockMatches) && matchesSupplier;
         });
-    
+
         const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
         const sorted = sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData;
-    
+
         setInitialRecords(sorted);
-    
+
         // Update recordsData with paginated results
         const from = (page - 1) * pageSize;
         const to = from + pageSize;
         setRecordsData(sorted.slice(from, to));
     }, [search, selectedSupplier, sortStatus, page, pageSize]);
-    
 
     // View stock details handler
     const handleViewDetails = (stock: any) => {
@@ -216,13 +233,12 @@ const Stock = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
             </div>
-
             {/* DataTable */}
             <div className="datatables">
                 <DataTable
                     highlightOnHover
                     className="whitespace-nowrap table-hover"
-                    records={recordsData} 
+                    records={recordsData}
                     columns={[
                         { accessor: 'id', title: '#' },
                         { accessor: 'product', title: 'Product', sortable: true },
@@ -247,6 +263,17 @@ const Stock = () => {
                             ),
                         },
                     ]}
+                    totalRecords={initialRecords.length}
+                    recordsPerPage={pageSize}
+                    page={page}
+                    onPageChange={(p) => setPage(p)}
+                    recordsPerPageOptions={PAGE_SIZES}
+                    onRecordsPerPageChange={setPageSize}
+                    sortStatus={sortStatus}
+                    onSortStatusChange={setSortStatus}
+                    minHeight={200}
+                    noRecordsText="No records"
+                    paginationText={({ from, to, totalRecords }) => `Showing ${from} to ${to} of ${totalRecords} entries`}
                 />
             </div>
             {isModalOpen && <StockModal stock={selectedStock} onClose={() => setIsModalOpen(false)} />}
