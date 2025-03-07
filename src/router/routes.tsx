@@ -6,7 +6,7 @@ const KhataSale = lazy(() => import('../pages/khataSale'));
 const InvoiceHistory = lazy(() => import('../pages/invoiceHistory'));
 // const Invoice = lazy(() => import('../pages/Invoice'));
 const User = lazy(() => import('../pages/user'));
-const Sale = lazy(() => import('../pages/Sale'));
+const InvoiceForm = lazy(() => import('../pages/InvoiceForm'));
 const Purchase = lazy(() => import('../pages/Purchase'));
 const ERROR404 = lazy(() => import('../pages/Error404'));
 const Stock = lazy(() => import('../pages/Stock'));
@@ -24,18 +24,15 @@ const routes = [
         element: <Purchase />,
     },
     {
-        path: '/sale',
-        element: <Sale />,
+        path: '/invoice',
+        element: <InvoiceForm />,
     },
     // Data Tables
     {
         path: '/stock',
         element: <Stock />,
     },
-    // {
-    //     path: '/invoice',
-    //     element: <Invoice />,
-    // },
+   
     {
         path: '/user',
         element: <User />,
