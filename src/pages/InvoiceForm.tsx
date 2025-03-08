@@ -147,7 +147,7 @@ const productSchema = Yup.object().shape({
 
 const paymentUpdateSchema = Yup.object().shape({
     paymentTypes: Yup.array()
-        .of(Yup.string().oneOf(['cash', 'bank', 'check'] as const))
+        .of(Yup.string())
         .min(1, 'At least one payment type is required'),
     cashAmount: Yup.string().when('paymentTypes', {
         is: (types: string[]) => types?.includes('cash'),
