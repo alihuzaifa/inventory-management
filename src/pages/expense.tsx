@@ -5,14 +5,17 @@ import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import { downloadExcel } from 'react-export-table-to-excel';
+import { capitalize } from 'lodash';
 
 interface Expense {
     id: number;
     expenseName: string;
     amount: number;
     date: string;
-    note?: string;
 }
+
+const col = ['id', 'expenseName', 'amount', 'date'];
+const header = ['ID', 'Expense Name', 'Amount', 'Date'];
 
 const Expense = () => {
     const dispatch = useDispatch();
@@ -23,28 +26,12 @@ const Expense = () => {
     // Form states
     const [expenseName, setExpenseName] = useState('');
     const [amount, setAmount] = useState<number | ''>('');
-    const [note, setNote] = useState('');
 
     // Table states
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [records, setRecords] = useState<Expense[]>([
-        {
-            id: 1,
-            expenseName: 'Chai',
-            amount: 500,
-            date: '2024-03-20',
-            note: 'Morning tea expenses',
-        },
-        {
-            id: 2,
-            expenseName: 'Stationary',
-            amount: 1200,
-            date: '2024-03-20',
-            note: 'Office supplies',
-        },
-    ]);
+    const [records, setRecords] = useState<Expense[]>([]);
     const [search, setSearch] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
         columnAccessor: 'date',
@@ -60,14 +47,12 @@ const Expense = () => {
                 expenseName,
                 amount: Number(amount),
                 date: new Date().toISOString().split('T')[0],
-                note: note || undefined,
             };
             setRecords([newExpense, ...records]);
 
             // Reset form
             setExpenseName('');
             setAmount('');
-            setNote('');
         }
     };
 
@@ -82,60 +67,61 @@ const Expense = () => {
         return '';
     };
 
-    // Export functions
-    const handleExportExcel = () => {
-        const header = ['Expense Name', 'Amount', 'Date', 'Note'];
+    const handleExportCSV = () => {
+        const csvContent = [header.join(','), ...records.map((item) => col.map((key) => (key === 'amount' ? `Rs. ${item[key as keyof Expense]}` : item[key as keyof Expense])).join(','))].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'expense_records.csv';
+        link.click();
+    };
+
+    const handleDownloadExcel = () => {
         const excelData = records.map((item) => ({
+            ID: item.id,
             'Expense Name': item.expenseName,
             Amount: `Rs. ${item.amount.toLocaleString()}`,
             Date: formatDate(item.date),
-            Note: item.note || '',
         }));
 
         downloadExcel({
-            fileName: 'expense-history',
+            fileName: 'expense_records',
             sheet: 'Expenses',
-            tablePayload: {
-                header,
-                body: excelData,
-            },
+            tablePayload: { header, body: excelData },
         });
     };
 
-    const exportTable = (type: string) => {
-        if (type === 'csv') {
-            const header = ['Expense Name', 'Amount', 'Date', 'Note'];
-            const csvContent = [header.join(','), ...records.map((item) => [item.expenseName, item.amount, item.date, item.note || ''].join(','))].join('\n');
+    const handlePrint = () => {
+        let printContent = '<h2 style="text-align: center; margin-bottom: 20px;">Expense Records</h2>';
+        printContent += '<table border="1" style="width:100%; border-collapse: collapse;">';
+        printContent += '<tr>' + header.map((h) => `<th style="padding: 8px; text-align: center;">${h}</th>`).join('') + '</tr>';
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'expense_history.csv';
-            link.click();
-        } else if (type === 'print') {
-            const printContent = document.querySelector('.datatables')?.innerHTML;
-            if (printContent) {
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                    printWindow.document.write(`
-                        <html>
-                            <head>
-                                <title>Expense History</title>
-                                <style>
-                                    table { border-collapse: collapse; width: 100%; }
-                                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                    th { background-color: #f8f9fa; }
-                                </style>
-                            </head>
-                            <body>
-                                ${printContent}
-                            </body>
-                        </html>
-                    `);
-                    printWindow.document.close();
-                    printWindow.print();
-                }
-            }
+        records.forEach((item) => {
+            printContent +=
+                '<tr>' +
+                col
+                    .map((key) => {
+                        let value = '';
+                        if (key === 'amount') {
+                            value = `Rs. ${item[key as keyof Expense]}`;
+                        } else if (key === 'date') {
+                            value = formatDate(item[key as keyof Expense] as string);
+                        } else {
+                            value = item[key as keyof Expense].toString();
+                        }
+                        return `<td style="padding: 8px; text-align: center;">${value}</td>`;
+                    })
+                    .join('') +
+                '</tr>';
+        });
+        printContent += '</table>';
+
+        const printWindow = window.open('', '', 'width=800,height=600');
+        if (printWindow) {
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.print();
         }
     };
 
@@ -150,11 +136,11 @@ const Expense = () => {
             const first = a[sortStatus.columnAccessor as keyof Expense];
             const second = b[sortStatus.columnAccessor as keyof Expense];
             const dir = sortStatus.direction === 'desc' ? -1 : 1;
-            
+
             if (first === undefined || second === undefined) {
                 return 0;
             }
-            
+
             return first < second ? -1 * dir : first > second ? 1 * dir : 0;
         });
 
@@ -167,7 +153,7 @@ const Expense = () => {
             <div className="panel">
                 <h2 className="text-xl font-bold mb-4">Add New Expense</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="expenseName" className="block mb-2">
                                 Expense Name
@@ -179,12 +165,6 @@ const Expense = () => {
                                 Amount
                             </label>
                             <input id="amount" type="number" className="form-input" value={amount} onChange={(e) => setAmount(Number(e.target.value))} placeholder="Enter amount" required />
-                        </div>
-                        <div>
-                            <label htmlFor="note" className="block mb-2">
-                                Note (Optional)
-                            </label>
-                            <input id="note" type="text" className="form-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note" />
                         </div>
                     </div>
                     <div className="flex justify-end">
@@ -199,16 +179,16 @@ const Expense = () => {
             <div className="panel">
                 <div className="flex md:items-center justify-between md:flex-row flex-col mb-4.5 gap-5">
                     {/* Export buttons */}
-                    <div className="flex items-center flex-wrap gap-2">
-                        <button type="button" onClick={() => exportTable('csv')} className="btn btn-primary btn-sm">
+                    <div className="flex items-center flex-wrap">
+                        <button type="button" onClick={() => handleExportCSV()} className="btn btn-primary btn-sm m-1 ">
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
                             CSV
                         </button>
-                        <button type="button" onClick={handleExportExcel} className="btn btn-primary btn-sm">
+                        <button type="button" className="btn btn-primary btn-sm m-1" onClick={handleDownloadExcel}>
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
                             EXCEL
                         </button>
-                        <button type="button" onClick={() => exportTable('print')} className="btn btn-primary btn-sm">
+                        <button type="button" onClick={() => handlePrint()} className="btn btn-primary btn-sm m-1">
                             <IconPrinter className="ltr:mr-2 rtl:ml-2" />
                             PRINT
                         </button>
@@ -227,6 +207,11 @@ const Expense = () => {
                         className="whitespace-nowrap table-hover"
                         records={records}
                         columns={[
+                            {
+                                accessor: 'id',
+                                title: 'Id',
+                                render: (item) => item.id,
+                            },
                             { accessor: 'expenseName', title: 'Expense Name', sortable: true },
                             {
                                 accessor: 'amount',
@@ -240,7 +225,6 @@ const Expense = () => {
                                 sortable: true,
                                 render: ({ date }) => formatDate(date),
                             },
-                            { accessor: 'note', title: 'Note' },
                         ]}
                         totalRecords={records.length}
                         recordsPerPage={pageSize}
