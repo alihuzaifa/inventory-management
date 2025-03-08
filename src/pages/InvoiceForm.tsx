@@ -7,7 +7,9 @@ import { setPageTitle } from '../store/themeConfigSlice';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
+import IconEye from '../components/Icon/IconEye';
 import { IRootState } from '../store';
+import { downloadExcel } from 'react-export-table-to-excel';
 const InvoicePdf = lazy(() => import('./Invoice'));
 
 interface FormikCustomerDetails {
@@ -67,6 +69,28 @@ interface InvoiceRecord {
     billType: 'perfect' | 'fake';
 }
 
+type PaymentType = 'cash' | 'bank' | 'check';
+type BillType = 'perfect' | 'fake';
+
+interface FilterStates {
+    search: string;
+    dateRange: {
+        from: string;
+        to: string;
+    };
+    selectedPaymentMethod: PaymentType | 'all';
+    selectedBillType: BillType | 'all';
+}
+
+interface PaymentFormValues {
+    paymentTypes: PaymentType[];
+    cashAmount: string;
+    bankAmount: string;
+    bankName: string;
+    checkAmount: string;
+    checkNumber: string;
+}
+
 const products = [
     { id: 1, name: 'LED TV', quantities: [500, 100, 1000] },
     { id: 2, name: 'Laptop', quantities: [50, 100, 200] },
@@ -122,6 +146,37 @@ const productSchema = Yup.object().shape({
     totalPrice: Yup.number().required('Total price is required'),
 });
 
+const paymentUpdateSchema = Yup.object().shape({
+    paymentTypes: Yup.array()
+        .of(Yup.string().oneOf(['cash', 'bank', 'check'] as const))
+        .min(1, 'At least one payment type is required'),
+    cashAmount: Yup.string().when('paymentTypes', {
+        is: (types: string[]) => types?.includes('cash'),
+        then: (schema) => schema.required('Cash amount is required'),
+        otherwise: (schema) => schema.notRequired(),
+    }),
+    bankAmount: Yup.string().when('paymentTypes', {
+        is: (types: string[]) => types?.includes('bank'),
+        then: (schema) => schema.required('Bank amount is required'),
+        otherwise: (schema) => schema.notRequired(),
+    }),
+    bankName: Yup.string().when('paymentTypes', {
+        is: (types: string[]) => types?.includes('bank'),
+        then: (schema) => schema.required('Bank name is required'),
+        otherwise: (schema) => schema.notRequired(),
+    }),
+    checkAmount: Yup.string().when('paymentTypes', {
+        is: (types: string[]) => types?.includes('check'),
+        then: (schema) => schema.required('Check amount is required'),
+        otherwise: (schema) => schema.notRequired(),
+    }),
+    checkNumber: Yup.string().when('paymentTypes', {
+        is: (types: string[]) => types?.includes('check'),
+        then: (schema) => schema.required('Check number is required'),
+        otherwise: (schema) => schema.notRequired(),
+    }),
+});
+
 const Invoice = () => {
     const dispatch = useDispatch();
     const [initialRecords, setInitialRecords] = useState<InvoiceRecord[]>([]);
@@ -138,6 +193,19 @@ const Invoice = () => {
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+    const [filterStates, setFilterStates] = useState<FilterStates>({
+        search: '',
+        dateRange: {
+            from: '',
+            to: '',
+        },
+        selectedPaymentMethod: 'all',
+        selectedBillType: 'all',
+    });
+
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceRecord | null>(null);
 
     useEffect(() => {
         dispatch(setPageTitle('Sale Form'));
@@ -157,17 +225,23 @@ const Invoice = () => {
     }, [search, initialRecords]);
 
     const handleCustomerSubmit = (values: FormikCustomerDetails) => {
-        const totalPaymentAmount = Number(values.cashAmount || 0) + Number(values.bankAmount || 0) + Number(values.checkAmount || 0);
+        // Calculate total payment
+        const cashAmount = Number(values.cashAmount || 0);
+        const bankAmount = Number(values.bankAmount || 0);
+        const checkAmount = Number(values.checkAmount || 0);
+        const totalPayment = cashAmount + bankAmount + checkAmount;
 
-        if (totalPaymentAmount !== totalBillAmount) {
+        // Check if total payment exceeds total bill amount
+        if (totalPayment > totalBillAmount) {
             Swal.fire({
                 icon: 'error',
                 title: 'Payment Error',
-                text: `Total payment amount (${totalPaymentAmount}) must be equal to the bill amount (${totalBillAmount})`,
+                text: `Total payment (${totalPayment.toLocaleString()}) cannot exceed bill amount (${totalBillAmount.toLocaleString()})`,
             });
             return;
         }
 
+        // If validation passes, proceed with saving
         setCustomerData(values);
         Swal.fire({
             icon: 'success',
@@ -188,9 +262,16 @@ const Invoice = () => {
         const updatedProducts = [...currentProducts, newProduct];
         setCurrentProducts(updatedProducts);
 
-        // Update total bill amount
+        // Calculate and update total bill amount
         const newTotalAmount = updatedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
         setTotalBillAmount(newTotalAmount);
+
+        // Force Formik to revalidate with new total bill amount
+        if (customerFormRef.current) {
+            customerFormRef.current.setFieldValue('cashAmount', customerFormRef.current.values.cashAmount, true);
+            customerFormRef.current.setFieldValue('bankAmount', customerFormRef.current.values.bankAmount, true);
+            customerFormRef.current.setFieldValue('checkAmount', customerFormRef.current.values.checkAmount, true);
+        }
 
         resetForm();
     };
@@ -198,8 +279,17 @@ const Invoice = () => {
     const handleRemoveProduct = (productId: number) => {
         const updatedProducts = currentProducts.filter((p) => p.id !== productId);
         setCurrentProducts(updatedProducts);
+
+        // Calculate and update total bill amount
         const newTotalAmount = updatedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
         setTotalBillAmount(newTotalAmount);
+
+        // Force Formik to revalidate with new total bill amount
+        if (customerFormRef.current) {
+            customerFormRef.current.setFieldValue('cashAmount', customerFormRef.current.values.cashAmount, true);
+            customerFormRef.current.setFieldValue('bankAmount', customerFormRef.current.values.bankAmount, true);
+            customerFormRef.current.setFieldValue('checkAmount', customerFormRef.current.values.checkAmount, true);
+        }
     };
 
     const handleSaveInvoice = () => {
@@ -234,7 +324,7 @@ const Invoice = () => {
             products: [...currentProducts],
             saleDate: new Date().toISOString(),
             totalBillAmount,
-            billType: customerData.billType as 'perfect' | 'fake' || 'perfect',
+            billType: (customerData.billType as 'perfect' | 'fake') || 'perfect',
         };
 
         setInitialRecords([...initialRecords, newInvoice]);
@@ -276,11 +366,201 @@ const Invoice = () => {
         });
     };
 
-    const exportToExcel = () => {};
-    const exportToCSV = () => {};
-    const handlePrint = () => {};
+    const capitalize = (text: string) => {
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    };
 
-    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark');
+    const formatDate = (date: string) => {
+        return new Date(date).toLocaleDateString();
+    };
+
+    const exportTable = (type: string) => {
+        let columns: any = ['id', 'customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
+        let records = recordsData;
+        let filename = 'Invoice Record';
+
+        let newVariable: any;
+        newVariable = window.navigator;
+
+        if (type === 'csv') {
+            let coldelimiter = ';';
+            let linedelimiter = '\n';
+            let result = columns
+                .map((d: any) => {
+                    return capitalize(d);
+                })
+                .join(coldelimiter);
+            result += linedelimiter;
+            records.map((item: any) => {
+                columns.map((d: any, index: any) => {
+                    if (index > 0) {
+                        result += coldelimiter;
+                    }
+                    let val = item[d] ? item[d] : '';
+                    if (d === 'totalBillAmount') {
+                        val = `Rs. ${val.toLocaleString()}`;
+                    } else if (d === 'remainingAmount') {
+                        val = `Rs. ${calculateRemainingAmount(item).toLocaleString()}`;
+                    } else if (d === 'saleDate') {
+                        val = formatDate(val);
+                    } else if (d === 'paymentTypes') {
+                        val = val.join(', ');
+                    } else if (d === 'billType') {
+                        val = val === 'perfect' ? 'Perfect Bill' : 'Fake Bill';
+                    }
+                    result += val;
+                });
+                result += linedelimiter;
+            });
+
+            if (result == null) return;
+            if (!result.match(/^data:text\/csv/i) && !newVariable.msSaveOrOpenBlob) {
+                var data = 'data:application/csv;charset=utf-8,' + encodeURIComponent(result);
+                var link = document.createElement('a');
+                link.setAttribute('href', data);
+                link.setAttribute('download', filename + '.csv');
+                link.click();
+            } else {
+                var blob = new Blob([result]);
+                if (newVariable.msSaveOrOpenBlob) {
+                    newVariable.msSaveBlob(blob, filename + '.csv');
+                }
+            }
+        } else if (type === 'print') {
+            var rowhtml = '<p>' + filename + '</p>';
+            rowhtml +=
+                '<table style="width: 100%; " cellpadding="0" cellcpacing="0"><thead><tr style="color: #515365; background: #eff5ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; "> ';
+            columns.map((d: any) => {
+                rowhtml += '<th>' + capitalize(d) + '</th>';
+            });
+            rowhtml += '</tr></thead>';
+            rowhtml += '<tbody>';
+
+            records.map((item: any) => {
+                rowhtml += '<tr>';
+                columns.map((d: any) => {
+                    let val = item[d] ? item[d] : '';
+                    if (d === 'totalBillAmount') {
+                        val = `Rs. ${val.toLocaleString()}`;
+                    } else if (d === 'remainingAmount') {
+                        val = `Rs. ${calculateRemainingAmount(item).toLocaleString()}`;
+                    } else if (d === 'saleDate') {
+                        val = formatDate(val);
+                    } else if (d === 'paymentTypes') {
+                        val = val.join(', ');
+                    } else if (d === 'billType') {
+                        val = val === 'perfect' ? 'Perfect Bill' : 'Fake Bill';
+                    }
+                    rowhtml += '<td>' + val + '</td>';
+                });
+                rowhtml += '</tr>';
+            });
+            rowhtml +=
+                '<style>body {font-family:Arial; color:#495057;}p{text-align:center;font-size:18px;font-weight:bold;margin:15px;}table{ border-collapse: collapse; border-spacing: 0; }th,td{font-size:12px;text-align:left;padding: 4px;}th{padding:8px 4px;}tr:nth-child(2n-1){background:#f7f7f7; }</style>';
+            rowhtml += '</tbody></table>';
+            var winPrint: any = window.open('', '', 'left=0,top=0,width=1000,height=600,toolbar=0,scrollbars=0,status=0');
+            winPrint.document.write('<title>Print</title>' + rowhtml);
+            winPrint.document.close();
+            winPrint.focus();
+            winPrint.print();
+        }
+    };
+
+    const handleDownloadExcel = () => {
+        const excelData = recordsData.map((item) => ({
+            'Invoice #': item.id,
+            Customer: item.customerName,
+            Phone: item.phoneNumber,
+            'Total Amount': `Rs. ${item.totalBillAmount.toLocaleString()}`,
+            'Remaining Amount': `Rs. ${calculateRemainingAmount(item).toLocaleString()}`,
+            'Bill Type': item.billType === 'perfect' ? 'Perfect Bill' : 'Fake Bill',
+            'Payment Method': item.paymentTypes.join(', '),
+            Date: formatDate(item.saleDate),
+        }));
+
+        const header = ['Invoice #', 'Customer', 'Phone', 'Total Amount', 'Remaining Amount', 'Bill Type', 'Payment Method', 'Date'];
+
+        downloadExcel({
+            fileName: 'invoices',
+            sheet: 'Invoices',
+            tablePayload: {
+                header,
+                body: excelData,
+            },
+        });
+    };
+
+    const calculateRemainingAmount = (invoice: InvoiceRecord): number => {
+        const totalPaid = invoice.cashAmount + invoice.bankAmount + invoice.checkAmount;
+        return invoice.totalBillAmount - totalPaid;
+    };
+
+    const handleAddPayment = (invoice: InvoiceRecord) => {
+        setSelectedInvoiceForPayment(invoice);
+        setIsPaymentModalOpen(true);
+    };
+
+    const handlePaymentSubmit = (values: PaymentFormValues) => {
+        if (!selectedInvoiceForPayment) return;
+
+        const cashAmount = Number(values.cashAmount || 0);
+        const bankAmount = Number(values.bankAmount || 0);
+        const checkAmount = Number(values.checkAmount || 0);
+        const totalNewPayment = cashAmount + bankAmount + checkAmount;
+        const remainingAmount = calculateRemainingAmount(selectedInvoiceForPayment);
+
+        // Validate total payment against remaining amount
+        if (totalNewPayment > remainingAmount) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Payment Error',
+                text: `Total payment (${totalNewPayment.toLocaleString()}) cannot exceed remaining amount (${remainingAmount.toLocaleString()})`,
+            });
+            return;
+        }
+
+        // Update records if validation passes
+        setInitialRecords((prev) =>
+            prev.map((record) => {
+                if (record.id === selectedInvoiceForPayment.id) {
+                    const updatedPaymentTypes = [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[];
+                    return {
+                        ...record,
+                        paymentTypes: updatedPaymentTypes,
+                        cashAmount: record.cashAmount + cashAmount,
+                        bankAmount: record.bankAmount + bankAmount,
+                        checkAmount: record.checkAmount + checkAmount,
+                        bankName: values.bankName || record.bankName,
+                        checkNumber: values.checkNumber || record.checkNumber,
+                    };
+                }
+                return record;
+            })
+        );
+
+        // Update recordsData to reflect changes
+        setRecordsData((prev) =>
+            prev.map((record) => {
+                if (record.id === selectedInvoiceForPayment.id) {
+                    const updatedPaymentTypes = [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[];
+                    return {
+                        ...record,
+                        paymentTypes: updatedPaymentTypes,
+                        cashAmount: record.cashAmount + cashAmount,
+                        bankAmount: record.bankAmount + bankAmount,
+                        checkAmount: record.checkAmount + checkAmount,
+                        bankName: values.bankName || record.bankName,
+                        checkNumber: values.checkNumber || record.checkNumber,
+                    };
+                }
+                return record;
+            })
+        );
+
+        setIsPaymentModalOpen(false);
+        setSelectedInvoiceForPayment(null);
+        Swal.fire('Success', 'Payment updated successfully', 'success');
+    };
 
     return (
         <>
@@ -444,6 +724,10 @@ const Invoice = () => {
                             }}
                             validationSchema={customerDetailsSchema}
                             onSubmit={handleCustomerSubmit}
+                            enableReinitialize
+                            validateOnChange={true}
+                            validateOnBlur={true}
+                            context={{ totalBillAmount: totalBillAmount }}
                             innerRef={customerFormRef}
                         >
                             {({ errors, touched, values }) => (
@@ -553,44 +837,68 @@ const Invoice = () => {
 
             {/* Previous Invoices Table */}
             <div className="panel mt-6">
-                <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light">Previous Invoices</h5>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <button className="btn btn-primary" onClick={exportToExcel}>
-                            <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
-                            Excel
-                        </button>
-                        <button className="btn btn-primary" onClick={exportToCSV}>
+                <div className="flex md:items-center justify-between md:flex-row flex-col mb-4.5 gap-5">
+                    <div className="flex items-center flex-wrap gap-2">
+                        <h5 className="font-semibold text-lg dark:text-white-light">Previous Invoices</h5>
+                        <button type="button" onClick={() => exportTable('csv')} className="btn btn-primary btn-sm">
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
                             CSV
                         </button>
-                        <button className="btn btn-primary" onClick={handlePrint}>
-                            <IconPrinter className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
-                            Print
+                        <button type="button" onClick={handleDownloadExcel} className="btn btn-primary btn-sm">
+                            <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
+                            EXCEL
+                        </button>
+                        <button type="button" onClick={() => exportTable('print')} className="btn btn-primary btn-sm">
+                            <IconPrinter className="ltr:mr-2 rtl:ml-2" />
+                            PRINT
                         </button>
                     </div>
-                    <div className="ltr:ml-auto rtl:mr-auto">
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <div className="flex items-center gap-2">
+                        <select className="form-select" value={filterStates.selectedBillType} onChange={(e) => setFilterStates({ ...filterStates, selectedBillType: e.target.value as BillType })}>
+                            <option value="all">All Bill Types</option>
+                            <option value="perfect">Perfect Bill</option>
+                            <option value="fake">Fake Bill</option>
+                        </select>
+                        <select
+                            className="form-select"
+                            value={filterStates.selectedPaymentMethod}
+                            onChange={(e) => setFilterStates({ ...filterStates, selectedPaymentMethod: e.target.value as PaymentType })}
+                        >
+                            <option value="all">All Payment Methods</option>
+                            <option value="cash">Cash</option>
+                            <option value="bank">Bank Transfer</option>
+                            <option value="check">Check</option>
+                        </select>
+                        <input
+                            type="text"
+                            className="form-input w-auto"
+                            placeholder="Search..."
+                            value={filterStates.search}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterStates({ ...filterStates, search: e.target.value })}
+                        />
                     </div>
                 </div>
 
                 <div className="datatables">
                     <DataTable
+                        highlightOnHover
+                        className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
-                            { accessor: 'id', title: 'Invoice #' },
-                            { accessor: 'customerName', title: 'Customer' },
-                            { accessor: 'phoneNumber', title: 'Phone' },
+                            { accessor: 'id', title: 'Invoice #', sortable: true },
+                            { accessor: 'customerName', title: 'Customer', sortable: true },
+                            { accessor: 'phoneNumber', title: 'Phone', sortable: true },
                             {
                                 accessor: 'totalBillAmount',
                                 title: 'Total Amount',
+                                sortable: true,
                                 render: ({ totalBillAmount }) => `Rs. ${totalBillAmount.toLocaleString()}`,
                             },
                             {
                                 accessor: 'billType',
                                 title: 'Bill Type',
                                 sortable: true,
-                                render: ({ billType }: any) => (
+                                render: ({ billType }) => (
                                     <span className={`badge ${billType === 'perfect' ? 'badge-outline-success' : 'badge-outline-warning'}`}>
                                         {billType === 'perfect' ? 'Perfect Bill' : 'Fake Bill'}
                                     </span>
@@ -602,18 +910,27 @@ const Invoice = () => {
                                 render: ({ paymentTypes }) => paymentTypes.join(', '),
                             },
                             {
-                                accessor: 'saleDate',
-                                title: 'Date',
-                                render: ({ saleDate }) => new Date(saleDate).toLocaleDateString(),
+                                accessor: 'remainingAmount',
+                                title: 'Remaining Amount',
+                                sortable: true,
+                                render: (row: InvoiceRecord) => {
+                                    const remaining = calculateRemainingAmount(row);
+                                    return <span className={`${remaining > 0 ? 'text-danger' : 'text-success'}`}>Rs. {remaining.toLocaleString()}</span>;
+                                },
                             },
                             {
                                 accessor: 'actions',
                                 title: 'Actions',
-                                render: (row) => (
+                                render: (row: InvoiceRecord) => (
                                     <div className="flex gap-2">
                                         <button className="btn btn-sm btn-primary" onClick={() => handleViewInvoice(row)}>
-                                            View
+                                            <IconEye className="w-4 h-4" />
                                         </button>
+                                        {calculateRemainingAmount(row) > 0 && (
+                                            <button className="btn btn-sm btn-success" onClick={() => handleAddPayment(row)}>
+                                                Add Payment
+                                            </button>
+                                        )}
                                         <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row.id)}>
                                             Delete
                                         </button>
@@ -624,7 +941,7 @@ const Invoice = () => {
                         totalRecords={recordsData.length}
                         recordsPerPage={pageSize}
                         page={page}
-                        onPageChange={(p) => setPage(p)}
+                        onPageChange={setPage}
                         recordsPerPageOptions={PAGE_SIZES}
                         onRecordsPerPageChange={setPageSize}
                         sortStatus={sortStatus}
@@ -637,7 +954,7 @@ const Invoice = () => {
 
             {/* Invoice View Modal */}
             {isViewModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-[999] overflow-y-auto">
+                <div className="fixed inset-0 bg-black/60 z-[999]">
                     <div className="flex items-start justify-center min-h-screen px-4">
                         <div className="bg-white dark:bg-navy-700 mt-10 rounded-lg w-full max-w-5xl">
                             <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
@@ -667,6 +984,135 @@ const Invoice = () => {
                                 </button>
                             </div>
                             <div className="p-5">{selectedInvoice && <InvoicePdf invoiceData={selectedInvoice} />}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isPaymentModalOpen && selectedInvoiceForPayment && (
+                <div className="fixed inset-0 z-[999]">
+                    <div className="flex items-start justify-center min-h-screen px-4">
+                        <div className="panel rounded-lg w-full max-w-lg">
+                            <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                <h5 className="text-lg font-semibold">Add Payment</h5>
+                                <button
+                                    type="button"
+                                    className="text-white-dark hover:text-dark"
+                                    onClick={() => {
+                                        setIsPaymentModalOpen(false);
+                                        setSelectedInvoiceForPayment(null);
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <circle opacity="0.5" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+                                        <path d="M14.5 9.50002L9.5 14.5M9.49998 9.5L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="p-5">
+                                <div className="mb-5">
+                                    <p className="text-base">
+                                        Remaining Amount: <span className="font-semibold text-danger">Rs. {calculateRemainingAmount(selectedInvoiceForPayment).toLocaleString()}</span>
+                                    </p>
+                                </div>
+                                <Formik<PaymentFormValues>
+                                    initialValues={{
+                                        paymentTypes: [],
+                                        cashAmount: '',
+                                        bankAmount: '',
+                                        bankName: '',
+                                        checkAmount: '',
+                                        checkNumber: '',
+                                    }}
+                                    validationSchema={paymentUpdateSchema}
+                                    onSubmit={(values) => {
+                                        const cashAmount = Number(values.cashAmount || 0);
+                                        const bankAmount = Number(values.bankAmount || 0);
+                                        const checkAmount = Number(values.checkAmount || 0);
+                                        const totalNewPayment = cashAmount + bankAmount + checkAmount;
+
+                                        if (!selectedInvoiceForPayment) return;
+
+                                        const remainingAmount = calculateRemainingAmount(selectedInvoiceForPayment);
+
+                                        if (totalNewPayment > remainingAmount) {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Payment Error',
+                                                text: `Total payment (${totalNewPayment.toLocaleString()}) cannot exceed remaining amount (${remainingAmount.toLocaleString()})`,
+                                            });
+                                            return;
+                                        }
+
+                                        handlePaymentSubmit(values);
+                                    }}
+                                >
+                                    {({ values, errors, touched }) => (
+                                        <Form className="space-y-5">
+                                            <div>
+                                                <label className="mb-2 block">Payment Types</label>
+                                                <div className="flex gap-4">
+                                                    <label className="inline-flex">
+                                                        <Field type="checkbox" name="paymentTypes" value="cash" className="form-checkbox" />
+                                                        <span className="ml-2">Cash</span>
+                                                    </label>
+                                                    <label className="inline-flex">
+                                                        <Field type="checkbox" name="paymentTypes" value="bank" className="form-checkbox" />
+                                                        <span className="ml-2">Bank</span>
+                                                    </label>
+                                                    <label className="inline-flex">
+                                                        <Field type="checkbox" name="paymentTypes" value="check" className="form-checkbox" />
+                                                        <span className="ml-2">Check</span>
+                                                    </label>
+                                                </div>
+                                                {touched.paymentTypes && errors.paymentTypes && <div className="text-danger mt-1">{errors.paymentTypes}</div>}
+                                            </div>
+
+                                            {values.paymentTypes.includes('cash') && (
+                                                <div>
+                                                    <label>Cash Amount</label>
+                                                    <Field name="cashAmount" type="number" className="form-input" />
+                                                    {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
+                                                </div>
+                                            )}
+
+                                            {values.paymentTypes.includes('bank') && (
+                                                <>
+                                                    <div>
+                                                        <label>Bank Amount</label>
+                                                        <Field name="bankAmount" type="number" className="form-input" />
+                                                        {touched.bankAmount && errors.bankAmount && <div className="text-danger mt-1">{errors.bankAmount}</div>}
+                                                    </div>
+                                                    <div>
+                                                        <label>Bank Name</label>
+                                                        <Field name="bankName" type="text" className="form-input" />
+                                                        {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {values.paymentTypes.includes('check') && (
+                                                <>
+                                                    <div>
+                                                        <label>Check Amount</label>
+                                                        <Field name="checkAmount" type="number" className="form-input" />
+                                                        {touched.checkAmount && errors.checkAmount && <div className="text-danger mt-1">{errors.checkAmount}</div>}
+                                                    </div>
+                                                    <div>
+                                                        <label>Check Number</label>
+                                                        <Field name="checkNumber" type="text" className="form-input" />
+                                                        {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            <button type="submit" className="btn btn-primary !mt-6">
+                                                Update Payment
+                                            </button>
+                                        </Form>
+                                    )}
+                                </Formik>
+                            </div>
                         </div>
                     </div>
                 </div>
