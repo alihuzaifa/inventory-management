@@ -26,27 +26,20 @@ const User = () => {
     }, []);
 
     const [editMode, setEditMode] = useState(false);
+    const [editId, setEditId] = useState<number | null>(null);
     const formikRef = useRef<any>(null);
 
-    // Sample data
-    const rowData: IUser[] = [
-        {
-            id: 1,
-            type: 'user',
-            email: 'user@example.com',
-            password: '******',
-            status: 'active',
-            createdAt: '2024-01-15',
-        },
-        {
-            id: 2,
-            type: 'khata',
-            name: 'Ahmed Ali',
-            phoneNumber: '03001234567',
-            status: 'active',
-            createdAt: '2024-01-16',
-        },
-    ];
+    // Initialize with empty users array
+    const [users, setUsers] = useState<IUser[]>([]);
+
+    // Table configuration
+    const [page, setPage] = useState(1);
+    const PAGE_SIZES = [10, 20, 30, 50, 100];
+    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+    const [initialRecords, setInitialRecords] = useState<IUser[]>([]);
+    const [recordsData, setRecordsData] = useState<IUser[]>([]);
+    const [search, setSearch] = useState('');
+    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
 
     // Form validation schema
     const userSchema = Yup.object().shape({
@@ -78,18 +71,9 @@ const User = () => {
         }),
     });
 
-    // Table configuration
-    const [page, setPage] = useState(1);
-    const PAGE_SIZES = [10, 20, 30, 50, 100];
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState(rowData);
-    const [recordsData, setRecordsData] = useState(initialRecords);
-    const [search, setSearch] = useState('');
-    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
-
     // Filtering and sorting effect
     useEffect(() => {
-        const filteredData = rowData.filter((item) => {
+        const filteredData = users.filter((item) => {
             const searchLower = search.toLowerCase();
             return (
                 item.id.toString().includes(searchLower) ||
@@ -115,10 +99,41 @@ const User = () => {
         const from = (page - 1) * pageSize;
         const to = from + pageSize;
         setRecordsData(sortedData.slice(from, to));
-    }, [search, sortStatus, page, pageSize]);
+    }, [users, search, sortStatus, page, pageSize]);
 
     // Handle form submission
     const handleSubmit = (values: any, { resetForm }: any) => {
+        if (editMode && editId !== null) {
+            // Update existing user
+            const updatedUsers = users.map((user) => {
+                if (user.id === editId) {
+                    return {
+                        ...user,
+                        type: values.type,
+                        email: values.type === 'user' ? values.email : undefined,
+                        password: values.type === 'user' ? values.password : undefined,
+                        name: values.type === 'khata' ? values.name : undefined,
+                        phoneNumber: values.type === 'khata' ? values.phoneNumber : undefined,
+                    };
+                }
+                return user;
+            });
+            setUsers(updatedUsers);
+        } else {
+            // Add new user
+            const newUser: IUser = {
+                id: users.length + 1,
+                type: values.type,
+                email: values.type === 'user' ? values.email : undefined,
+                password: values.type === 'user' ? values.password : undefined,
+                name: values.type === 'khata' ? values.name : undefined,
+                phoneNumber: values.type === 'khata' ? values.phoneNumber : undefined,
+                status: 'active',
+                createdAt: new Date().toISOString().split('T')[0],
+            };
+            setUsers([...users, newUser]);
+        }
+
         const toast = Swal.mixin({
             toast: true,
             position: 'top',
@@ -134,11 +149,12 @@ const User = () => {
 
         resetForm();
         setEditMode(false);
+        setEditId(null);
     };
 
     // Handle edit
     const handleEdit = (id: number) => {
-        const user = rowData.find((item) => item.id === id);
+        const user = users.find((item) => item.id === id);
         if (user && formikRef.current) {
             formikRef.current.setValues({
                 type: user.type,
@@ -148,6 +164,7 @@ const User = () => {
                 phoneNumber: user.phoneNumber || '',
             });
             setEditMode(true);
+            setEditId(id);
         }
     };
 
@@ -162,9 +179,8 @@ const User = () => {
             padding: '2em',
         }).then((result) => {
             if (result.value) {
-                const updatedData = initialRecords.filter((item) => item.id !== id);
-                setInitialRecords(updatedData);
-                setRecordsData(updatedData);
+                const updatedData = users.filter((item) => item.id !== id);
+                setUsers(updatedData);
                 Swal.fire('Deleted!', 'User has been deleted.', 'success');
             }
         });
@@ -181,22 +197,23 @@ const User = () => {
             padding: '2em',
         }).then((result) => {
             if (result.value) {
-                const updatedData = initialRecords.map((item) => {
+                const updatedData = users.map((item) => {
                     if (item.id === id) {
                         return { ...item, status: item.status === 'active' ? 'inactive' : 'active' };
                     }
                     return item;
                 });
-                setInitialRecords(updatedData as IUser[]);
-                setRecordsData(updatedData as IUser[]);
+                setUsers(updatedData as IUser[]);
                 Swal.fire('Updated!', 'User status has been updated.', 'success');
             }
         });
     };
 
+    // Rest of the JSX remains the same
     return (
         <>
             <div className="panel">
+                {/* Form section */}
                 <div className="mb-5">
                     <h5 className="font-semibold text-lg dark:text-white-light mb-4">{editMode ? 'Edit User' : 'Add User'}</h5>
                     <Formik
@@ -211,8 +228,10 @@ const User = () => {
                         validationSchema={userSchema}
                         onSubmit={handleSubmit}
                     >
+                        {/* Existing form JSX */}
                         {({ errors, submitCount, values }) => (
                             <Form className="space-y-5">
+                                {/* Existing form fields */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                     <div className={submitCount ? (errors.type ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="type">User Type *</label>
@@ -264,6 +283,7 @@ const User = () => {
                                             className="btn btn-danger"
                                             onClick={() => {
                                                 setEditMode(false);
+                                                setEditId(null);
                                                 formikRef.current.resetForm();
                                             }}
                                         >
@@ -280,6 +300,7 @@ const User = () => {
                 </div>
             </div>
 
+            {/* Users list section */}
             <div className="panel mt-6">
                 <div className="mb-5 flex items-center justify-between">
                     <h5 className="font-semibold text-lg dark:text-white-light">Users List</h5>

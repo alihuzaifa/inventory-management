@@ -2,13 +2,12 @@ import { lazy, useEffect, useState, useRef } from 'react';
 import * as Yup from 'yup';
 import { Field, Form, Formik, FormikProps } from 'formik';
 import Swal from 'sweetalert2';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import IconEye from '../components/Icon/IconEye';
-import { IRootState } from '../store';
 import { downloadExcel } from 'react-export-table-to-excel';
 const InvoicePdf = lazy(() => import('./Invoice'));
 
