@@ -11,6 +11,7 @@ import IconTrash from '../components/Icon/IconTrash';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import { downloadExcel } from 'react-export-table-to-excel';
+
 const col = ['id', 'supplier', 'product', 'quantity', 'price', 'totalPrice', 'purchaseDate'];
 const header = ['Id', 'Supplier', 'Product', 'Quantity', 'Price', 'Total Price', 'Purchase Date'];
 
@@ -22,6 +23,7 @@ const Purchase = () => {
 
     const [editMode, setEditMode] = useState(false);
     const formikRef = useRef<any>(null);
+    const [rowData, setRowData] = useState<any[]>([]);
 
     // Sample supplier data for dropdown
     const suppliers = [
@@ -29,7 +31,19 @@ const Purchase = () => {
         { id: 2, name: 'Karachi Electronics' },
     ];
 
-    const submitForm = () => {
+    const submitForm = (values: any) => {
+        const newPurchase = {
+            id: rowData.length + 1,
+            supplier: values.supplier,
+            product: values.product,
+            quantity: Number(values.quantity),
+            price: Number(values.price),
+            totalPrice: Number(values.totalPrice),
+            purchaseDate: new Date().toISOString().split('T')[0],
+        };
+
+        setRowData([...rowData, newPurchase]);
+
         const toast = Swal.mixin({
             toast: true,
             position: 'top',
@@ -49,39 +63,31 @@ const Purchase = () => {
         quantity: Yup.number().required('Quantity is required').positive('Quantity must be positive'),
         price: Yup.number().required('Price is required').positive('Price must be positive'),
     });
-    // Sample purchase data
-    const rowData = [
-        {
-            id: 1,
-            supplier: 'Ali Trading Company',
-            product: 'LED TV',
-            quantity: 5,
-            price: 50000,
-            totalPrice: 250000,
-            purchaseDate: '2024-01-15',
-        },
-    ];
 
     // Table configuration
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState(sortBy(rowData, 'id'));
-    const [recordsData, setRecordsData] = useState(initialRecords);
+    const [initialRecords, setInitialRecords] = useState<any[]>([]);
+    const [recordsData, setRecordsData] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
 
     useEffect(() => {
-        const filteredData = rowData.filter((item: any) => {
+        setInitialRecords(sortBy(rowData, 'id'));
+    }, [rowData]);
+
+    useEffect(() => {
+        const filteredData = initialRecords.filter((item: any) => {
             const searchLower = search.toLowerCase();
             return (
                 item.id.toString().includes(searchLower) ||
-                item.supplier.toLowerCase().includes(searchLower) || // Changed from supplierName
+                item.supplier.toLowerCase().includes(searchLower) ||
                 item.product.toLowerCase().includes(searchLower) ||
                 item.quantity.toString().includes(searchLower) ||
-                item.price.toString().includes(searchLower) || // Added price search
+                item.price.toString().includes(searchLower) ||
                 item.totalPrice.toString().includes(searchLower) ||
-                formatDate(item.purchaseDate).toLowerCase().includes(searchLower) // Added toLowerCase()
+                formatDate(item.purchaseDate).toLowerCase().includes(searchLower)
             );
         });
 
@@ -90,18 +96,15 @@ const Purchase = () => {
 
         setInitialRecords(sorted);
 
-        // Update recordsData with paginated results
         const from = (page - 1) * pageSize;
         const to = from + pageSize;
         setRecordsData(sorted.slice(from, to));
-    }, [search, sortStatus, page, pageSize]);
+    }, [search, sortStatus, page, pageSize, initialRecords]);
 
-    // Add effect for pagination
     useEffect(() => {
         setPage(1);
     }, [pageSize]);
 
-    // Add effect for sorting
     useEffect(() => {
         const data = sortBy(initialRecords, sortStatus.columnAccessor);
         setInitialRecords(sortStatus.direction === 'desc' ? data.reverse() : data);
@@ -120,16 +123,14 @@ const Purchase = () => {
 
     const handleEdit = (id: number) => {
         const purchase = rowData.find((item) => item.id === id);
-        if (purchase) {
-            if (formikRef.current) {
-                formikRef.current.setValues({
-                    supplier: purchase.supplier,
-                    product: purchase.product,
-                    quantity: purchase.quantity,
-                    price: purchase.price,
-                    totalPrice: purchase.totalPrice,
-                });
-            }
+        if (purchase && formikRef.current) {
+            formikRef.current.setValues({
+                supplier: purchase.supplier,
+                product: purchase.product,
+                quantity: purchase.quantity,
+                price: purchase.price,
+                totalPrice: purchase.totalPrice,
+            });
             setEditMode(true);
         }
     };
@@ -144,9 +145,8 @@ const Purchase = () => {
             padding: '2em',
         }).then((result) => {
             if (result.value) {
-                const updatedData = initialRecords.filter((item) => item.id !== id);
-                setInitialRecords(updatedData);
-                setRecordsData(updatedData);
+                const updatedData = rowData.filter((item) => item.id !== id);
+                setRowData(updatedData);
                 Swal.fire('Deleted!', 'Purchase has been deleted.', 'success');
             }
         });
@@ -269,8 +269,7 @@ const Purchase = () => {
                         }}
                         validationSchema={purchaseSchema}
                         onSubmit={(values, { resetForm }) => {
-                            console.log(values);
-                            submitForm();
+                            submitForm(values);
                             resetForm();
                             setEditMode(false);
                         }}
@@ -355,7 +354,6 @@ const Purchase = () => {
             </div>
 
             <div className="panel mt-6">
-                {/* Export buttons section */}
                 <div className="flex md:items-center justify-between md:flex-row flex-col mb-4.5 gap-5">
                     <div className="flex items-center flex-wrap">
                         <button type="button" onClick={() => exportTable('csv')} className="btn btn-primary btn-sm m-1 ">
@@ -375,7 +373,6 @@ const Purchase = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
 
-                {/* DataTable */}
                 <div className="datatables">
                     <DataTable
                         highlightOnHover

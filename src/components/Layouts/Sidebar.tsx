@@ -64,6 +64,7 @@ const Sidebar = () => {
                     </div>
                     <PerfectScrollbar className="h-[calc(100vh-80px)] relative">
                         <ul className="relative font-semibold space-y-0.5 p-4 py-0">
+                            {/* Dashboard */}
                             <li className="nav-item">
                                 <NavLink to="/" className="group">
                                     <div className="flex items-center">
@@ -72,11 +73,13 @@ const Sidebar = () => {
                                     </div>
                                 </NavLink>
                             </li>
+
+                            {/* Inventory Management */}
                             <li className="nav-item">
                                 <NavLink to="/purchase" className="group">
                                     <div className="flex items-center">
-                                        <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('purchase')}</span>
+                                        <IconDollarSign className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Purchase')}</span>
                                     </div>
                                 </NavLink>
                             </li>
@@ -88,10 +91,12 @@ const Sidebar = () => {
                                     </div>
                                 </NavLink>
                             </li>
+
+                            {/* Sales Management */}
                             <li className="nav-item">
                                 <NavLink to="/invoice" className="group">
                                     <div className="flex items-center">
-                                        <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
+                                        <IconDollarSign className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Invoice')}</span>
                                     </div>
                                 </NavLink>
@@ -99,19 +104,13 @@ const Sidebar = () => {
                             <li className="nav-item">
                                 <NavLink to="/invoiceHistory" className="group">
                                     <div className="flex items-center">
-                                        <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
+                                        <IconDollarSign className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Invoice History')}</span>
                                     </div>
                                 </NavLink>
                             </li>
-                            <li className="nav-item">
-                                <NavLink to="/user" className="group">
-                                    <div className="flex items-center">
-                                        <IconUser className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('User')}</span>
-                                    </div>
-                                </NavLink>
-                            </li>
+
+                            {/* Khata Management */}
                             <li className="nav-item">
                                 <NavLink to="/khata-sale" className="group">
                                     <div className="flex items-center">
@@ -128,6 +127,8 @@ const Sidebar = () => {
                                     </div>
                                 </NavLink>
                             </li>
+
+                            {/* Finance */}
                             <li className="nav-item">
                                 <NavLink to="/expense" className="group">
                                     <div className="flex items-center">
@@ -136,6 +137,18 @@ const Sidebar = () => {
                                     </div>
                                 </NavLink>
                             </li>
+
+                            {/* User Management */}
+                            <li className="nav-item">
+                                <NavLink to="/user" className="group">
+                                    <div className="flex items-center">
+                                        <IconUser className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('User')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+
+                            {/* Settings */}
                             <li className="nav-item">
                                 <NavLink to="/setting" className="group">
                                     <div className="flex items-center">
