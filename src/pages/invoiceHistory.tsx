@@ -2,265 +2,589 @@ import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
-import IconEye from '../components/Icon/IconEye';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
-import IconEdit from '../components/Icon/IconEdit';
-import { capitalize } from 'lodash';
+import IconEye from '../components/Icon/IconEye';
 import { downloadExcel } from 'react-export-table-to-excel';
+import Swal from 'sweetalert2';
+import { lazy } from 'react';
+import { Formik, Field, Form } from 'formik';
+import * as Yup from 'yup';
+const InvoicePdf = lazy(() => import('./Invoice'));
 
-interface InvoiceHistory {
+// Payment Types
+type PaymentType = 'cash' | 'bank' | 'check';
+type BillType = 'perfect' | 'fake';
+
+// Interface for payment amounts
+interface PaymentAmounts {
+    cashAmount: number;
+    bankAmount: number;
+    checkAmount: number;
+    bankName?: string;
+    checkNumber?: string;
+}
+
+// Product interface
+interface ProductItem {
     id: number;
-    invoiceNumber: string;
-    customerName: string;
     product: string;
-    quantity: number;
-    unitPrice: number;
-    totalAmount: number;
-    paidAmount: number;
-    remainingAmount: number;
-    paymentMethod: string[];
-    billType: 'fake' | 'real';
-    status: 'paid' | 'partial' | 'unpaid';
-    saleDate: string;
+    availableQuantity: number;
+    sellingQuantity: number;
+    price: number;
+    totalPrice: number;
 }
 
-interface InvoicePaymentHistory {
+// Base invoice interface
+interface BaseInvoice {
     id: number;
-    invoiceId: number;
-    paidAmount: number;
-    paymentMethod: string[];
-    paymentDate: string;
-    note: string;
+    customerName: string;
+    phoneNumber: string;
+    saleDate: string;
+    totalBillAmount: number;
+    billType: BillType;
 }
 
-interface UpdatePaymentModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onUpdate: (amount: number, method: string[], note: string) => void;
+// Complete invoice record interface
+interface InvoiceRecord extends BaseInvoice, PaymentAmounts {
+    paymentTypes: PaymentType[];
+    products: ProductItem[];
 }
 
-const UpdatePaymentModal = ({ isOpen, onClose, onUpdate }: UpdatePaymentModalProps) => {
-    const [amount, setAmount] = useState(0);
-    const [method, setMethod] = useState<string[]>(['cash']);
-    const [note, setNote] = useState('');
+// Form data interface for payment updates
+interface PaymentUpdateFormData {
+    paymentTypes: PaymentType[];
+    cashAmount?: string;
+    bankAmount?: string;
+    bankName?: string;
+    checkAmount?: string;
+    checkNumber?: string;
+}
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onUpdate(amount, method, note);
-        onClose();
-        // Reset form
-        setAmount(0);
-        setMethod(['cash']);
-        setNote('');
+// Filter states interface
+interface FilterStates {
+    search: string;
+    dateRange: {
+        from: string;
+        to: string;
     };
+    selectedPaymentMethod: PaymentType | 'all';
+    selectedBillType: BillType | 'all';
+}
 
-    if (!isOpen) return null;
+// Table states interface
+interface TableStates {
+    page: number;
+    pageSize: number;
+    search: string;
+    sortStatus: DataTableSortStatus;
+}
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-96">
-                <h2 className="text-xl font-bold mb-4">Update Payment</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block mb-2">Amount</label>
-                        <input
-                            type="number"
-                            className="form-input"
-                            value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
-                            required
-                        />
-                    </div>
-                    <div className="mb-4">
-                        <label className="block mb-2">Payment Method</label>
-                        <select
-                            className="form-select"
-                            value={method[0]}
-                            onChange={(e) => setMethod([e.target.value])}
-                            required
-                        >
-                            <option value="cash">Cash</option>
-                            <option value="bank">Bank Transfer</option>
-                            <option value="check">Check</option>
-                        </select>
-                    </div>
-                    <div className="mb-4">
-                        <label className="block mb-2">Note</label>
-                        <textarea
-                            className="form-textarea"
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            className="btn btn-outline-danger"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn btn-primary"
-                        >
-                            Update
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
+type PaymentFormValues = {
+    paymentTypes: PaymentType[];
+    cashAmount: string;
+    bankAmount: string;
+    bankName: string;
+    checkAmount: string;
+    checkNumber: string;
 };
 
 const InvoiceHistory = () => {
     const dispatch = useDispatch();
-    useEffect(() => {
-        dispatch(setPageTitle('Invoice History'));
-    }, []);
 
-    // Modal state
-    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+    // Records state
+    const [initialRecords, setInitialRecords] = useState<InvoiceRecord[]>([]);
+    const [recordsData, setRecordsData] = useState<InvoiceRecord[]>([]);
 
-    // Sample invoice history data
-    const invoiceHistoryData: InvoiceHistory[] = [
-        {
-            id: 1,
-            invoiceNumber: 'INV-001',
-            customerName: 'John Doe',
-            product: 'LED TV',
-            quantity: 2,
-            unitPrice: 45000,
-            totalAmount: 90000,
-            paidAmount: 90000,
-            remainingAmount: 0,
-            paymentMethod: ['cash'],
-            billType: 'real',
-            status: 'paid',
-            saleDate: '2024-01-15',
-        },
-        {
-            id: 2,
-            invoiceNumber: 'INV-002',
-            customerName: 'Jane Smith',
-            product: 'Laptop',
-            quantity: 1,
-            unitPrice: 85000,
-            totalAmount: 85000,
-            paidAmount: 50000,
-            remainingAmount: 35000,
-            paymentMethod: ['bank', 'check'],
-            billType: 'fake',
-            status: 'partial',
-            saleDate: '2024-01-16',
-        },
-    ];
-
-    // Payment history data
-    const [paymentHistory, setPaymentHistory] = useState<InvoicePaymentHistory[]>([
-        {
-            id: 1,
-            invoiceId: 2,
-            paidAmount: 50000,
-            paymentMethod: ['bank'],
-            paymentDate: '2024-01-16',
-            note: 'Initial payment',
-        },
-    ]);
+    // Modal states
+    const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState<boolean>(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
+    const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceRecord | null>(null);
 
     // Table states
-    const PAGE_SIZES = [10, 20, 30, 50, 100];
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [records, setRecords] = useState(invoiceHistoryData);
-    const [search, setSearch] = useState('');
-    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
-        columnAccessor: 'id',
-        direction: 'asc',
+    const PAGE_SIZES = [10, 20, 30, 50, 100] as const;
+    const [tableStates, setTableStates] = useState<TableStates>({
+        page: 1,
+        pageSize: PAGE_SIZES[0],
+        search: '',
+        sortStatus: {
+            columnAccessor: 'id',
+            direction: 'asc',
+        },
+    });
+    // Filter states
+    const [filterStates, setFilterStates] = useState<FilterStates>({
+        dateRange: { from: '', to: '' },
+        selectedPaymentMethod: 'all',
+        selectedBillType: 'all',
+        search: '',
     });
 
-    // Filter states
-    const [dateRange, setDateRange] = useState({ from: '', to: '' });
-    const [selectedStatus, setSelectedStatus] = useState('all');
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('all');
+    // Payment update schema
+    const paymentUpdateSchema = Yup.object().shape({
+        paymentTypes: Yup.array().min(1, 'At least one payment type is required'),
+        cashAmount: Yup.string().when('paymentTypes', {
+            is: (types: string[]) => types?.includes('cash'),
+            then: (schema) => schema.required('Cash amount is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+        bankAmount: Yup.string().when('paymentTypes', {
+            is: (types: string[]) => types?.includes('bank'),
+            then: (schema) => schema.required('Bank amount is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+        bankName: Yup.string().when('paymentTypes', {
+            is: (types: string[]) => types?.includes('bank'),
+            then: (schema) => schema.required('Bank name is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+        checkAmount: Yup.string().when('paymentTypes', {
+            is: (types: string[]) => types?.includes('check'),
+            then: (schema) => schema.required('Check amount is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+        checkNumber: Yup.string().when('paymentTypes', {
+            is: (types: string[]) => types?.includes('check'),
+            then: (schema) => schema.required('Check number is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+    });
 
-    // Format date helper
-    const formatDate = (date: string) => {
-        if (date) {
-            const dt = new Date(date);
-            const month = dt.getMonth() + 1 < 10 ? '0' + (dt.getMonth() + 1) : dt.getMonth() + 1;
-            const day = dt.getDate() < 10 ? '0' + dt.getDate() : dt.getDate();
-            return day + '/' + month + '/' + dt.getFullYear();
-        }
-        return '';
-    };
+    useEffect(() => {
+        dispatch(setPageTitle('Invoice History'));
 
-    // Handle view invoice details
-    const handleViewInvoice = (id: number) => {
-        const invoice = records.find(inv => inv.id === id);
-        const history = paymentHistory.filter(ph => ph.invoiceId === id);
-        
-        // Here you would typically open a modal or navigate to a detail page
-        console.log('Invoice details:', invoice);
-        console.log('Payment history:', history);
-        alert(`Invoice #${invoice?.invoiceNumber}\nPayment History:\n${history.map(h => 
-            `Date: ${formatDate(h.paymentDate)}\nAmount: Rs. ${h.paidAmount}\nMethod: ${h.paymentMethod.join(', ')}\nNote: ${h.note}`
-        ).join('\n\n')}`);
-    };
+        // Replace the existing sampleData with this:
+        const sampleData: InvoiceRecord[] = [
+            {
+                id: 1,
+                customerName: 'John Doe',
+                phoneNumber: '12345678901',
+                paymentTypes: ['cash'],
+                cashAmount: 90000,
+                bankAmount: 0,
+                checkAmount: 0,
+                products: [
+                    {
+                        id: 1,
+                        product: 'LED TV',
+                        availableQuantity: 100,
+                        sellingQuantity: 2,
+                        price: 45000,
+                        totalPrice: 90000,
+                    },
+                ],
+                saleDate: '2024-01-15',
+                totalBillAmount: 90000,
+                billType: 'perfect',
+            },
+            {
+                id: 2,
+                customerName: 'Alice Smith',
+                phoneNumber: '12345678902',
+                paymentTypes: ['bank', 'cash'],
+                cashAmount: 30000,
+                bankAmount: 40000,
+                checkAmount: 0,
+                products: [
+                    {
+                        id: 1,
+                        product: 'Laptop',
+                        availableQuantity: 50,
+                        sellingQuantity: 1,
+                        price: 70000,
+                        totalPrice: 70000,
+                    },
+                ],
+                saleDate: '2024-01-16',
+                totalBillAmount: 70000,
+                billType: 'fake',
+            },
+            {
+                id: 3,
+                customerName: 'Bob Wilson',
+                phoneNumber: '12345678903',
+                paymentTypes: ['check'],
+                cashAmount: 0,
+                bankAmount: 0,
+                checkAmount: 120000,
+                checkNumber: 'CHK001',
+                products: [
+                    {
+                        id: 1,
+                        product: 'Refrigerator',
+                        availableQuantity: 30,
+                        sellingQuantity: 1,
+                        price: 120000,
+                        totalPrice: 120000,
+                    },
+                ],
+                saleDate: '2024-01-17',
+                totalBillAmount: 120000,
+                billType: 'perfect',
+            },
+            {
+                id: 4,
+                customerName: 'Carol Brown',
+                phoneNumber: '12345678904',
+                paymentTypes: ['cash', 'bank'],
+                cashAmount: 25000,
+                bankAmount: 25000,
+                checkAmount: 0,
+                products: [
+                    {
+                        id: 1,
+                        product: 'Mobile Phone',
+                        availableQuantity: 200,
+                        sellingQuantity: 1,
+                        price: 80000,
+                        totalPrice: 80000,
+                    },
+                ],
+                saleDate: '2024-01-18',
+                totalBillAmount: 80000,
+                billType: 'fake',
+            },
+            {
+                id: 5,
+                customerName: 'David Miller',
+                phoneNumber: '12345678905',
+                paymentTypes: ['bank'],
+                cashAmount: 0,
+                bankAmount: 150000,
+                bankName: 'ABC Bank',
+                checkAmount: 0,
+                products: [
+                    {
+                        id: 1,
+                        product: 'Smart TV',
+                        availableQuantity: 75,
+                        sellingQuantity: 1,
+                        price: 150000,
+                        totalPrice: 150000,
+                    },
+                ],
+                saleDate: '2024-01-19',
+                totalBillAmount: 150000,
+                billType: 'perfect',
+            },
+            {
+                id: 6,
+                customerName: 'Emma Davis',
+                phoneNumber: '12345678906',
+                paymentTypes: ['cash'],
+                cashAmount: 40000,
+                bankAmount: 0,
+                checkAmount: 0,
+                products: [
+                    {
+                        id: 1,
+                        product: 'Washing Machine',
+                        availableQuantity: 45,
+                        sellingQuantity: 1,
+                        price: 60000,
+                        totalPrice: 60000,
+                    },
+                ],
+                saleDate: '2024-01-20',
+                totalBillAmount: 60000,
+                billType: 'fake',
+            },
+            {
+                id: 7,
+                customerName: 'Frank Johnson',
+                phoneNumber: '12345678907',
+                paymentTypes: ['check', 'cash'],
+                cashAmount: 30000,
+                bankAmount: 0,
+                checkAmount: 50000,
+                checkNumber: 'CHK002',
+                products: [
+                    {
+                        id: 1,
+                        product: 'Air Conditioner',
+                        availableQuantity: 25,
+                        sellingQuantity: 1,
+                        price: 80000,
+                        totalPrice: 80000,
+                    },
+                ],
+                saleDate: '2024-01-21',
+                totalBillAmount: 80000,
+                billType: 'perfect',
+            },
+            {
+                id: 8,
+                customerName: 'Grace Lee',
+                phoneNumber: '12345678908',
+                paymentTypes: ['bank', 'check'],
+                cashAmount: 0,
+                bankAmount: 70000,
+                bankName: 'XYZ Bank',
+                checkAmount: 30000,
+                checkNumber: 'CHK003',
+                products: [
+                    {
+                        id: 1,
+                        product: 'Gaming Console',
+                        availableQuantity: 60,
+                        sellingQuantity: 1,
+                        price: 100000,
+                        totalPrice: 100000,
+                    },
+                ],
+                saleDate: '2024-01-22',
+                totalBillAmount: 100000,
+                billType: 'fake',
+            },
+            {
+                id: 9,
+                customerName: 'Henry Wilson',
+                phoneNumber: '12345678909',
+                paymentTypes: ['cash', 'bank', 'check'],
+                cashAmount: 40000,
+                bankAmount: 30000,
+                bankName: 'DEF Bank',
+                checkAmount: 30000,
+                checkNumber: 'CHK004',
+                products: [
+                    {
+                        id: 1,
+                        product: 'Home Theater',
+                        availableQuantity: 35,
+                        sellingQuantity: 1,
+                        price: 100000,
+                        totalPrice: 100000,
+                    },
+                ],
+                saleDate: '2024-01-23',
+                totalBillAmount: 100000,
+                billType: 'perfect',
+            },
+            {
+                id: 10,
+                customerName: 'Isabel Garcia',
+                phoneNumber: '12345678910',
+                paymentTypes: ['cash'],
+                cashAmount: 40000,
+                bankAmount: 0,
+                checkAmount: 0,
+                products: [
+                    {
+                        id: 1,
+                        product: 'Digital Camera',
+                        availableQuantity: 40,
+                        sellingQuantity: 1,
+                        price: 75000,
+                        totalPrice: 75000,
+                    },
+                ],
+                saleDate: '2024-01-24',
+                totalBillAmount: 75000,
+                billType: 'fake',
+            },
+        ];
 
-    // Handle payment updates
-    const handleUpdatePayment = (invoiceId: number, amount: number, method: string[], note: string) => {
-        // Update invoice record
-        const updatedRecords = records.map(invoice => {
-            if (invoice.id === invoiceId) {
-                const newPaidAmount = invoice.paidAmount + amount;
-                const newRemainingAmount = invoice.totalAmount - newPaidAmount;
-                const newStatus = newPaidAmount >= invoice.totalAmount ? 'paid' : newPaidAmount > 0 ? 'partial' : 'unpaid';
-                
-                return {
-                    ...invoice,
-                    paidAmount: newPaidAmount,
-                    remainingAmount: newRemainingAmount,
-                    status: newStatus,
-                    paymentMethod: [...new Set([...invoice.paymentMethod, ...method])],
-                };
-            }
-            return invoice;
+        setInitialRecords(sampleData);
+        setRecordsData(sampleData);
+    }, [dispatch]);
+
+    useEffect(() => {
+        const filteredData = initialRecords.filter((item) => {
+            const matchesSearch =
+                filterStates.search === ''
+                    ? true
+                    : item.customerName.toLowerCase().includes(String(filterStates.search).toLowerCase()) ||
+                      item.phoneNumber.includes(String(filterStates.search)) ||
+                      item.paymentTypes.some((type) => type.toLowerCase().includes(String(filterStates.search).toLowerCase())) ||
+                      item.totalBillAmount.toString().includes(String(filterStates.search)) ||
+                      item.billType.toLowerCase().includes(String(filterStates.search).toLowerCase()) ||
+                      new Date(item.saleDate).toLocaleDateString().includes(String(filterStates.search));
+
+            const matchesPayment = filterStates.selectedPaymentMethod === 'all' ? true : item.paymentTypes.includes(filterStates.selectedPaymentMethod);
+
+            const matchesBillType = filterStates.selectedBillType === 'all' ? true : item.billType === filterStates.selectedBillType;
+
+            const matchesDateRange = true; // Implement date range filtering if needed
+
+            return matchesSearch && matchesPayment && matchesBillType && matchesDateRange;
         });
-        setRecords(updatedRecords as InvoiceHistory[]);
 
-        // Add payment history entry
-        const newHistoryEntry: InvoicePaymentHistory = {
-            id: paymentHistory.length + 1,
-            invoiceId,
-            paidAmount: amount,
-            paymentMethod: method,
-            paymentDate: new Date().toISOString().split('T')[0],
-            note,
-        };
-        setPaymentHistory([...paymentHistory, newHistoryEntry]);
+        // Sort data
+        const sortedData = [...filteredData].sort((a, b) => {
+            const first = a[tableStates.sortStatus.columnAccessor as keyof InvoiceRecord];
+            const second = b[tableStates.sortStatus.columnAccessor as keyof InvoiceRecord];
+            const dir = tableStates.sortStatus.direction === 'desc' ? -1 : 1;
+
+            if (typeof first === 'string' && typeof second === 'string') {
+                return first.localeCompare(second) * dir;
+            }
+            if (first === undefined || second === undefined) {
+                return 0;
+            }
+            return (first < second ? -1 : first > second ? 1 : 0) * dir;
+        });
+
+        setRecordsData(sortedData);
+    }, [filterStates.search, filterStates.selectedPaymentMethod, filterStates.selectedBillType, filterStates.dateRange, tableStates.sortStatus, initialRecords]);
+
+    const handleViewInvoice = (invoice: InvoiceRecord) => {
+        setSelectedInvoice(invoice);
+        setIsViewModalOpen(true);
     };
 
-    // Export functions
-    const handleExportExcel = () => {
-        const header = ['Invoice #', 'Customer', 'Product', 'Quantity', 'Unit Price', 'Total Amount', 'Paid Amount', 'Remaining', 'Payment Method', 'Bill Type', 'Status', 'Sale Date'];
+    const handleDeleteInvoice = (invoiceId: number) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'No, cancel!',
+            reverseButtons: true,
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setInitialRecords((prev) => prev.filter((record) => record.id !== invoiceId));
+                setRecordsData((prev) => prev.filter((record) => record.id !== invoiceId));
+                Swal.fire('Deleted!', 'Invoice has been deleted.', 'success');
+            }
+        });
+    };
 
-        const excelData = records.map((item) => ({
-            'Invoice #': item.invoiceNumber,
+    const capitalize = (text: string) => {
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    };
+
+    const formatDate = (date: string) => {
+        return new Date(date).toLocaleDateString();
+    };
+
+    // Define columns for export
+    const col = [
+        'id',
+        'customerName',
+        'phoneNumber',
+        'totalBillAmount',
+        'remainingAmount',
+        'billType',
+        'paymentTypes',
+        'saleDate'
+    ];
+
+    const header = [
+        'Invoice #',
+        'Customer',
+        'Phone',
+        'Total Amount',
+        'Remaining Amount',
+        'Bill Type',
+        'Payment Method',
+        'Date'
+    ];
+
+    // Replace the existing export functions with these
+    const exportTable = (type: string) => {
+        let columns: any = col;
+        let records = recordsData;
+        let filename = 'Invoice History';
+
+        let newVariable: any;
+        newVariable = window.navigator;
+
+        if (type === 'csv') {
+            let coldelimiter = ';';
+            let linedelimiter = '\n';
+            let result = columns
+                .map((d: any) => {
+                    return capitalize(d);
+                })
+                .join(coldelimiter);
+            result += linedelimiter;
+            records.map((item: any) => {
+                columns.map((d: any, index: any) => {
+                    if (index > 0) {
+                        result += coldelimiter;
+                    }
+                    let val = item[d];
+                    if (d === 'totalBillAmount') {
+                        val = `Rs. ${item[d].toLocaleString()}`;
+                    } else if (d === 'remainingAmount') {
+                        val = `Rs. ${calculateRemainingAmount(item).toLocaleString()}`;
+                    } else if (d === 'saleDate') {
+                        val = formatDate(item[d]);
+                    } else if (d === 'paymentTypes') {
+                        val = item[d].join(', ');
+                    } else if (d === 'billType') {
+                        val = item[d] === 'perfect' ? 'Perfect Bill' : 'Fake Bill';
+                    }
+                    result += val;
+                });
+                result += linedelimiter;
+            });
+
+            if (result == null) return;
+            if (!result.match(/^data:text\/csv/i) && !newVariable.msSaveOrOpenBlob) {
+                var data = 'data:application/csv;charset=utf-8,' + encodeURIComponent(result);
+                var link = document.createElement('a');
+                link.setAttribute('href', data);
+                link.setAttribute('download', filename + '.csv');
+                link.click();
+            } else {
+                var blob = new Blob([result]);
+                if (newVariable.msSaveOrOpenBlob) {
+                    newVariable.msSaveBlob(blob, filename + '.csv');
+                }
+            }
+        } else if (type === 'print') {
+            var rowhtml = '<p>' + filename + '</p>';
+            rowhtml +=
+                '<table style="width: 100%; " cellpadding="0" cellcpacing="0"><thead><tr style="color: #515365; background: #eff5ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; "> ';
+            columns.map((d: any) => {
+                rowhtml += '<th>' + capitalize(d) + '</th>';
+            });
+            rowhtml += '</tr></thead>';
+            rowhtml += '<tbody>';
+
+            records.map((item: any) => {
+                rowhtml += '<tr>';
+                columns.map((d: any) => {
+                    let val = item[d];
+                    if (d === 'totalBillAmount') {
+                        val = `Rs. ${item[d].toLocaleString()}`;
+                    } else if (d === 'remainingAmount') {
+                        val = `Rs. ${calculateRemainingAmount(item).toLocaleString()}`;
+                    } else if (d === 'saleDate') {
+                        val = formatDate(item[d]);
+                    } else if (d === 'paymentTypes') {
+                        val = item[d].join(', ');
+                    } else if (d === 'billType') {
+                        val = item[d] === 'perfect' ? 'Perfect Bill' : 'Fake Bill';
+                    }
+                    rowhtml += '<td>' + val + '</td>';
+                });
+                rowhtml += '</tr>';
+            });
+            rowhtml +=
+                '<style>body {font-family:Arial; color:#495057;}p{text-align:center;font-size:18px;font-weight:bold;margin:15px;}table{ border-collapse: collapse; border-spacing: 0; }th,td{font-size:12px;text-align:left;padding: 4px;}th{padding:8px 4px;}tr:nth-child(2n-1){background:#f7f7f7; }</style>';
+            rowhtml += '</tbody></table>';
+            var winPrint: any = window.open('', '', 'left=0,top=0,width=1000,height=600,toolbar=0,scrollbars=0,status=0');
+            winPrint.document.write('<title>Print</title>' + rowhtml);
+            winPrint.document.close();
+            winPrint.focus();
+            winPrint.print();
+        }
+    };
+
+    const handleDownloadExcel = () => {
+        const excelData = recordsData.map((item) => ({
+            'Invoice #': item.id,
             Customer: item.customerName,
-            Product: item.product,
-            Quantity: item.quantity,
-            'Unit Price': `Rs. ${item.unitPrice.toLocaleString()}`,
-            'Total Amount': `Rs. ${item.totalAmount.toLocaleString()}`,
-            'Paid Amount': `Rs. ${item.paidAmount.toLocaleString()}`,
-            Remaining: `Rs. ${item.remainingAmount.toLocaleString()}`,
-            'Payment Method': item.paymentMethod.join(', '),
-            'Bill Type': capitalize(item.billType),
-            Status: capitalize(item.status),
-            'Sale Date': formatDate(item.saleDate),
+            Phone: item.phoneNumber,
+            'Total Amount': `Rs. ${item.totalBillAmount.toLocaleString()}`,
+            'Remaining Amount': `Rs. ${calculateRemainingAmount(item).toLocaleString()}`,
+            'Bill Type': item.billType === 'perfect' ? 'Perfect Bill' : 'Fake Bill',
+            'Payment Method': item.paymentTypes.join(', '),
+            Date: formatDate(item.saleDate),
         }));
 
         downloadExcel({
@@ -273,79 +597,51 @@ const InvoiceHistory = () => {
         });
     };
 
-    const exportTable = (type: string) => {
-        if (type === 'csv') {
-            const header = ['Invoice #', 'Customer', 'Product', 'Quantity', 'Unit Price', 'Total Amount', 'Paid Amount', 'Remaining', 'Payment Method', 'Bill Type', 'Status', 'Sale Date'];
-            const csvContent = [
-                header.join(','),
-                ...records.map(item => [
-                    item.invoiceNumber,
-                    item.customerName,
-                    item.product,
-                    item.quantity,
-                    item.unitPrice,
-                    item.totalAmount,
-                    item.paidAmount,
-                    item.remainingAmount,
-                    item.paymentMethod.join(';'),
-                    item.billType,
-                    item.status,
-                    item.saleDate
-                ].join(','))
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'invoice_history.csv';
-            link.click();
-        } else if (type === 'print') {
-            const printContent = document.querySelector('.datatables')?.innerHTML;
-            if (printContent) {
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                    printWindow.document.write(`
-                        <html>
-                            <head>
-                                <title>Invoice History</title>
-                                <style>
-                                    table { border-collapse: collapse; width: 100%; }
-                                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                    th { background-color: #f8f9fa; }
-                                </style>
-                            </head>
-                            <body>
-                                ${printContent}
-                            </body>
-                        </html>
-                    `);
-                    printWindow.document.close();
-                    printWindow.print();
-                }
-            }
-        }
+    const calculateRemainingAmount = (invoice: InvoiceRecord): number => {
+        const totalPaid = invoice.cashAmount + invoice.bankAmount + invoice.checkAmount;
+        return invoice.totalBillAmount - totalPaid;
     };
 
-    // Filter effect
-    useEffect(() => {
-        let filteredData = invoiceHistoryData.filter((item) => {
-            const matchesSearch = search ? Object.values(item).some((val) => val.toString().toLowerCase().includes(search.toLowerCase())) : true;
-            const matchesStatus = selectedStatus === 'all' ? true : item.status === selectedStatus;
-            const matchesPayment = selectedPaymentMethod === 'all' ? true : item.paymentMethod.includes(selectedPaymentMethod);
-            const matchesDateRange = true; // Implement date range filtering if needed
-            return matchesSearch && matchesStatus && matchesPayment && matchesDateRange;
-        });
+    const handleAddPayment = (invoice: InvoiceRecord) => {
+        setSelectedInvoiceForPayment(invoice);
+        setIsPaymentModalOpen(true);
+    };
 
-        // Sort data
-        const sortedData = [...filteredData].sort((a, b) => {
-            const first = a[sortStatus.columnAccessor as keyof InvoiceHistory];
-            const second = b[sortStatus.columnAccessor as keyof InvoiceHistory];
-            const dir = sortStatus.direction === 'desc' ? -1 : 1;
-            return first < second ? -1 * dir : first > second ? 1 * dir : 0;
-        });
+    const handlePaymentSubmit = (values: PaymentUpdateFormData): void => {
+        if (!selectedInvoiceForPayment) return;
 
-        setRecords(sortedData);
-    }, [search, selectedStatus, selectedPaymentMethod, dateRange, sortStatus]);
+        const newCashAmount = Number(values.cashAmount || 0);
+        const newBankAmount = Number(values.bankAmount || 0);
+        const newCheckAmount = Number(values.checkAmount || 0);
+        const totalNewPayment = newCashAmount + newBankAmount + newCheckAmount;
+        const remainingAmount = calculateRemainingAmount(selectedInvoiceForPayment);
+
+        if (totalNewPayment > remainingAmount) {
+            Swal.fire('Error', 'Total payment cannot exceed remaining amount', 'error');
+            return;
+        }
+
+        setInitialRecords((prev) =>
+            prev.map((record) => {
+                if (record.id === selectedInvoiceForPayment.id) {
+                    return {
+                        ...record,
+                        paymentTypes: [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[],
+                        cashAmount: record.cashAmount + newCashAmount,
+                        bankAmount: record.bankAmount + newBankAmount,
+                        checkAmount: record.checkAmount + newCheckAmount,
+                        bankName: values.bankName || record.bankName,
+                        checkNumber: values.checkNumber || record.checkNumber,
+                    };
+                }
+                return record;
+            })
+        );
+
+        setIsPaymentModalOpen(false);
+        setSelectedInvoiceForPayment(null);
+        Swal.fire('Success', 'Payment updated successfully', 'success');
+    };
 
     return (
         <>
@@ -357,7 +653,7 @@ const InvoiceHistory = () => {
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
                             CSV
                         </button>
-                        <button type="button" onClick={handleExportExcel} className="btn btn-primary btn-sm">
+                        <button type="button" onClick={handleDownloadExcel} className="btn btn-primary btn-sm">
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
                             EXCEL
                         </button>
@@ -369,21 +665,35 @@ const InvoiceHistory = () => {
 
                     {/* Filters */}
                     <div className="flex items-center gap-2">
-                        <select className="form-select" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-                            <option value="all">All Status</option>
-                            <option value="paid">Paid</option>
-                            <option value="partial">Partial</option>
-                            <option value="unpaid">Unpaid</option>
+                        {/* Bill Type Filter */}
+                        <select className="form-select" value={filterStates.selectedBillType} onChange={(e) => setFilterStates({ ...filterStates, selectedBillType: e.target.value as BillType })}>
+                            <option value="all">All Bill Types</option>
+                            <option value="perfect">Perfect Bill</option>
+                            <option value="fake">Fake Bill</option>
                         </select>
 
-                        <select className="form-select" value={selectedPaymentMethod} onChange={(e) => setSelectedPaymentMethod(e.target.value)}>
+                        {/* Payment Method Filter */}
+                        <select
+                            className="form-select"
+                            value={filterStates.selectedPaymentMethod}
+                            onChange={(e) => setFilterStates({ ...filterStates, selectedPaymentMethod: e.target.value as PaymentType })}
+                        >
                             <option value="all">All Payment Methods</option>
                             <option value="cash">Cash</option>
                             <option value="bank">Bank Transfer</option>
                             <option value="check">Check</option>
                         </select>
 
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                        {/* Search Input */}
+                        <input
+                            type="text"
+                            className="form-input w-auto"
+                            placeholder="Search..."
+                            value={filterStates.search}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                                setFilterStates({ ...filterStates, search: e.target.value })
+                            }
+                        />
                     </div>
                 </div>
 
@@ -392,116 +702,226 @@ const InvoiceHistory = () => {
                     <DataTable
                         highlightOnHover
                         className="whitespace-nowrap table-hover"
-                        records={records}
+                        records={recordsData}
                         columns={[
-                            { accessor: 'invoiceNumber', title: 'Invoice #', sortable: true },
+                            { accessor: 'id', title: 'Invoice #', sortable: true },
                             { accessor: 'customerName', title: 'Customer', sortable: true },
-                            { accessor: 'product', title: 'Product', sortable: true },
-                            { accessor: 'quantity', title: 'Quantity', sortable: true },
+                            { accessor: 'phoneNumber', title: 'Phone', sortable: true },
                             {
-                                accessor: 'unitPrice',
-                                title: 'Unit Price',
-                                sortable: true,
-                                render: ({ unitPrice }) => `Rs. ${unitPrice.toLocaleString()}`,
-                            },
-                            {
-                                accessor: 'totalAmount',
+                                accessor: 'totalBillAmount',
                                 title: 'Total Amount',
                                 sortable: true,
-                                render: ({ totalAmount }) => `Rs. ${totalAmount.toLocaleString()}`,
-                            },
-                            {
-                                accessor: 'paidAmount',
-                                title: 'Paid Amount',
-                                sortable: true,
-                                render: ({ paidAmount }) => `Rs. ${paidAmount.toLocaleString()}`,
-                            },
-                            {
-                                accessor: 'remainingAmount',
-                                title: 'Remaining',
-                                sortable: true,
-                                render: ({ remainingAmount }) => `Rs. ${remainingAmount.toLocaleString()}`,
-                            },
-                            {
-                                accessor: 'paymentMethod',
-                                title: 'Payment Method',
-                                render: ({ paymentMethod }) => paymentMethod.join(', '),
+                                render: ({ totalBillAmount }) => `Rs. ${totalBillAmount.toLocaleString()}`,
                             },
                             {
                                 accessor: 'billType',
                                 title: 'Bill Type',
                                 sortable: true,
-                                render: ({ billType }) => capitalize(billType),
-                            },
-                            {
-                                accessor: 'status',
-                                title: 'Status',
-                                sortable: true,
-                                render: ({ status }) => (
-                                    <span className={`badge ${status === 'paid' ? 'badge-outline-success' : status === 'partial' ? 'badge-outline-warning' : 'badge-outline-danger'}`}>
-                                        {capitalize(status)}
+                                render: ({ billType }) => (
+                                    <span className={`badge ${billType === 'perfect' ? 'badge-outline-success' : 'badge-outline-warning'}`}>
+                                        {billType === 'perfect' ? 'Perfect Bill' : 'Fake Bill'}
                                     </span>
                                 ),
                             },
                             {
+                                accessor: 'paymentTypes',
+                                title: 'Payment Method',
+                                render: ({ paymentTypes }) => paymentTypes.join(', '),
+                            },
+                            {
                                 accessor: 'saleDate',
-                                title: 'Sale Date',
+                                title: 'Date',
                                 sortable: true,
-                                render: ({ saleDate }) => formatDate(saleDate),
+                                render: ({ saleDate }) => new Date(saleDate).toLocaleDateString(),
+                            },
+                            {
+                                accessor: 'remainingAmount',
+                                title: 'Remaining Amount',
+                                sortable: true,
+                                render: (row) => {
+                                    const remaining = calculateRemainingAmount(row);
+                                    return <span className={`${remaining > 0 ? 'text-danger' : 'text-success'}`}>Rs. {remaining.toLocaleString()}</span>;
+                                },
                             },
                             {
                                 accessor: 'actions',
                                 title: 'Actions',
                                 render: (row) => (
                                     <div className="flex gap-2">
-                                        <button 
-                                            type="button" 
-                                            className="btn btn-sm btn-outline-info" 
-                                            onClick={() => handleViewInvoice(row.id)}
-                                        >
+                                        <button className="btn btn-sm btn-primary" onClick={() => handleViewInvoice(row)}>
                                             <IconEye className="w-4 h-4" />
                                         </button>
-                                        <button 
-                                            type="button" 
-                                            className="btn btn-sm btn-outline-primary" 
-                                            onClick={() => {
-                                                setSelectedInvoiceId(row.id);
-                                                setIsUpdateModalOpen(true);
-                                            }}
-                                        >
-                                            <IconEdit className="w-4 h-4" />
+                                        {calculateRemainingAmount(row) > 0 && (
+                                            <button className="btn btn-sm btn-success" onClick={() => handleAddPayment(row)}>
+                                                Add Payment
+                                            </button>
+                                        )}
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row.id)}>
+                                            Delete
                                         </button>
                                     </div>
                                 ),
                             },
                         ]}
-                        totalRecords={records.length}
-                        recordsPerPage={pageSize}
-                        page={page}
-                        onPageChange={(p) => setPage(p)}
-                        recordsPerPageOptions={PAGE_SIZES}
-                        onRecordsPerPageChange={setPageSize}
-                        sortStatus={sortStatus}
-                        onSortStatusChange={setSortStatus}
+                        totalRecords={recordsData.length}
+                        recordsPerPage={tableStates.pageSize}
+                        page={tableStates.page}
+                        onPageChange={(p) => setTableStates({ ...tableStates, page: p })}
+                        recordsPerPageOptions={[...PAGE_SIZES]}
+                        onRecordsPerPageChange={(p) => setTableStates({ ...tableStates, pageSize: p })}
+                        sortStatus={tableStates.sortStatus}
+                        onSortStatusChange={(s) => setTableStates({ ...tableStates, sortStatus: s })}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing ${from} to ${to} of ${totalRecords} entries`}
                     />
                 </div>
             </div>
-            
-            {/* Update Payment Modal */}
-            <UpdatePaymentModal
-                isOpen={isUpdateModalOpen}
-                onClose={() => {
-                    setIsUpdateModalOpen(false);
-                    setSelectedInvoiceId(null);
-                }}
-                onUpdate={(amount, method, note) => {
-                    if (selectedInvoiceId) {
-                        handleUpdatePayment(selectedInvoiceId, amount, method, note);
-                    }
-                }}
-            />
+
+            {/* Invoice View Modal */}
+            {isViewModalOpen && (
+                <div className="fixed inset-0 bg-black/60 z-[999] overflow-y-auto">
+                    <div className="flex items-start justify-center min-h-screen px-4">
+                        <div className="bg-white dark:bg-navy-700 mt-10 rounded-lg w-full max-w-5xl">
+                            <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                <h5 className="text-lg font-semibold">Invoice Preview</h5>
+                                <button
+                                    type="button"
+                                    className="text-white-dark hover:text-dark"
+                                    onClick={() => {
+                                        setIsViewModalOpen(false);
+                                        setSelectedInvoice(null);
+                                    }}
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="p-5">{selectedInvoice && <InvoicePdf invoiceData={selectedInvoice} />}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isPaymentModalOpen && selectedInvoiceForPayment && (
+                <div className="fixed inset-0 z-[999] overflow-y-auto">
+                    <div className="flex items-start justify-center min-h-screen px-4">
+                        <div className="panel dark:bg-navy-700 mt-10 rounded-lg w-full max-w-lg">
+                            <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                <h5 className="text-lg font-semibold">Add Payment</h5>
+                                <button
+                                    type="button"
+                                    className="text-white-dark hover:text-dark"
+                                    onClick={() => {
+                                        setIsPaymentModalOpen(false);
+                                        setSelectedInvoiceForPayment(null);
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <circle opacity="0.5" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+                                        <path d="M14.5 9.50002L9.5 14.5M9.49998 9.5L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="p-5">
+                                <div className="mb-5">
+                                    <p className="text-base">
+                                        Remaining Amount: <span className="font-semibold text-danger">Rs. {calculateRemainingAmount(selectedInvoiceForPayment).toLocaleString()}</span>
+                                    </p>
+                                </div>
+                                <Formik<PaymentFormValues>
+                                    initialValues={{
+                                        paymentTypes: [],
+                                        cashAmount: '',
+                                        bankAmount: '',
+                                        bankName: '',
+                                        checkAmount: '',
+                                        checkNumber: '',
+                                    }}
+                                    validationSchema={paymentUpdateSchema}
+                                    onSubmit={handlePaymentSubmit}
+                                >
+                                    {({ values, errors, touched, setFieldValue }) => (
+                                        <Form className="space-y-5">
+                                            <div>
+                                                <label className="mb-2 block">Payment Types</label>
+                                                <div className="flex gap-4">
+                                                    <label className="inline-flex">
+                                                        <Field type="checkbox" name="paymentTypes" value="cash" className="form-checkbox" />
+                                                        <span className="ml-2">Cash</span>
+                                                    </label>
+                                                    <label className="inline-flex">
+                                                        <Field type="checkbox" name="paymentTypes" value="bank" className="form-checkbox" />
+                                                        <span className="ml-2">Bank</span>
+                                                    </label>
+                                                    <label className="inline-flex">
+                                                        <Field type="checkbox" name="paymentTypes" value="check" className="form-checkbox" />
+                                                        <span className="ml-2">Check</span>
+                                                    </label>
+                                                </div>
+                                                {touched.paymentTypes && errors.paymentTypes && <div className="text-danger mt-1">{errors.paymentTypes}</div>}
+                                            </div>
+
+                                            {values.paymentTypes?.includes('cash') && (
+                                                <div>
+                                                    <label>Cash Amount</label>
+                                                    <Field name="cashAmount" type="number" className="form-input" />
+                                                    {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
+                                                </div>
+                                            )}
+
+                                            {values.paymentTypes?.includes('bank') && (
+                                                <>
+                                                    <div>
+                                                        <label>Bank Amount</label>
+                                                        <Field name="bankAmount" type="number" className="form-input" />
+                                                        {touched.bankAmount && errors.bankAmount && <div className="text-danger mt-1">{errors.bankAmount}</div>}
+                                                    </div>
+                                                    <div>
+                                                        <label>Bank Name</label>
+                                                        <Field name="bankName" type="text" className="form-input" />
+                                                        {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {values.paymentTypes?.includes('check') && (
+                                                <>
+                                                    <div>
+                                                        <label>Check Amount</label>
+                                                        <Field name="checkAmount" type="number" className="form-input" />
+                                                        {touched.checkAmount && errors.checkAmount && <div className="text-danger mt-1">{errors.checkAmount}</div>}
+                                                    </div>
+                                                    <div>
+                                                        <label>Check Number</label>
+                                                        <Field name="checkNumber" type="text" className="form-input" />
+                                                        {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            <button type="submit" className="btn btn-primary !mt-6">
+                                                Update Payment
+                                            </button>
+                                        </Form>
+                                    )}
+                                </Formik>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

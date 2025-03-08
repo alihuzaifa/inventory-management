@@ -1,375 +1,416 @@
 import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer';
 
-// Import font files
-import NunitoRegular from '../assets/fonts/Nunito-Regular.ttf';
-import NunitoSemiBold from '../assets/fonts/Nunito-SemiBold.ttf';
-import NunitoBold from '../assets/fonts/Nunito-Bold.ttf';
-import NunitoExtraBold from '../assets/fonts/Nunito-ExtraBold.ttf';
-
-// Register Nunito font
+// Register fonts
 Font.register({
     family: 'Nunito',
     fonts: [
-        { src: NunitoRegular }, // regular
-        { src: NunitoSemiBold, fontWeight: 600 }, // semibold
-        { src: NunitoBold, fontWeight: 700 }, // bold
-        { src: NunitoExtraBold, fontWeight: 900 }, // extra bold
+        { src: '/fonts/Nunito-Regular.ttf' },
+        { src: '/fonts/Nunito-SemiBold.ttf', fontWeight: 600 },
+        { src: '/fonts/Nunito-Bold.ttf', fontWeight: 700 },
+        { src: '/fonts/Nunito-ExtraBold.ttf', fontWeight: 800 },
     ],
 });
 
 const styles = StyleSheet.create({
     page: {
-        padding: 10,
+        padding: 30,
         fontFamily: 'Nunito',
+    },
+    darkPage: {
+        backgroundColor: '#1B2E4B',
+        color: '#888EA8',
+    },
+    lightPage: {
+        backgroundColor: '#FFFFFF',
+        color: '#000000',
     },
     header: {
-        marginBottom: 10,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 18,
-
+        fontSize: 24,
         textAlign: 'center',
         fontWeight: 700,
-        fontFamily: 'Nunito',
+        textTransform: 'uppercase',
     },
-    contactSection: {
-        marginTop: 10,
-        alignItems: 'flex-end', // This is equivalent to text-end
+    titleDark: {
+        color: '#888EA8',
     },
-    contactRow: {
-        fontSize: 10,
-
-        marginBottom: 2,
-    },
-    contactName: {
-        fontFamily: 'Nunito',
-        fontWeight: 600,
+    titleLight: {
+        color: '#000000',
     },
     contactInfo: {
-        fontFamily: 'Nunito',
+        marginTop: 8,
+        textAlign: 'right',
+        fontSize: 10,
+    },
+    contactInfoDark: {
+        color: '#888EA8',
+    },
+    contactInfoLight: {
+        color: '#4B5563',
+    },
+    contactName: {
+        fontWeight: 600,
     },
     divider: {
         borderBottomWidth: 1,
-        borderBottom: 1,
         marginVertical: 15,
-        width: '100%',
+    },
+    dividerDark: {
+        borderBottomColor: '#191E3A',
+    },
+    dividerLight: {
+        borderBottomColor: '#E0E6ED',
     },
     infoContainer: {
         flexDirection: 'row',
-        gap: 24, // equivalent to gap-6
-        marginBottom: 24,
+        justifyContent: 'space-between',
+        marginBottom: 20,
     },
     infoSection: {
-        flex: 1, // equivalent to w-1/2
-    },
-    infoGrid: {
-        gap: 12, // equivalent to gap-4
+        width: '48%',
     },
     infoRow: {
         flexDirection: 'row',
+        marginBottom: 8,
     },
     label: {
-        flex: 1,
+        width: '40%',
         fontSize: 10,
+    },
+    labelDark: {
+        color: '#888EA8',
+    },
+    labelLight: {
         color: '#4B5563',
     },
     value: {
         flex: 1,
         fontSize: 10,
-        fontFamily: 'Nunito',
-        fontWeight: 'semibold',
+        fontWeight: 600,
     },
-    paymentStatusContainer: {
-        flex: 1,
-        flexDirection: 'row', // This ensures the container wraps around the text
+    valueDark: {
+        color: '#888EA8',
+    },
+    valueLight: {
+        color: '#000000',
     },
     paymentStatus: {
         backgroundColor: '#DEF7EC',
         color: '#03543F',
-        padding: '2 8', // Increased horizontal padding
+        padding: '2 6',
         borderRadius: 4,
         fontSize: 10,
-        alignSelf: 'flex-start', // This makes the background only as wide as the text
+        alignSelf: 'flex-start',
     },
-    tableContainer: {
-        borderRadius: 4,
+    table: {
+        marginTop: 20,
     },
     tableHeader: {
         flexDirection: 'row',
         padding: '12 16',
+    },
+    tableHeaderDark: {
+        backgroundColor: '#1A2941',
+    },
+    tableHeaderLight: {
+        backgroundColor: '#F6F8FA',
     },
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
         padding: '12 16',
     },
-    tableRowLight: {
-        backgroundColor: '#ffffff',
-        borderBottomColor: '#e0e6ed',
-    },
     tableRowDark: {
-        backgroundColor: '#1a2941',
-        borderBottomColor: '#191e3a',
+        borderBottomColor: '#191E3A',
+    },
+    tableRowLight: {
+        borderBottomColor: '#E0E6ED',
+    },
+    tableRowStriped: {
+        backgroundColor: 'rgba(26, 41, 65, 0.4)',
     },
     tableRowStripedLight: {
         backgroundColor: 'rgba(246, 248, 250, 0.5)',
     },
-    tableRowStripedDark: {
-        backgroundColor: 'rgba(26, 41, 65, 0.4)',
-    },
-    tableHeaderLight: {
-        backgroundColor: '#f6f8fa',
-    },
-    tableHeaderDark: {
-        backgroundColor: '#1a2941',
+    column: {
+        fontSize: 10,
     },
     columnId: {
         width: '10%',
-        fontSize: 10,
-
-        textAlign: 'left',
     },
-    columnTitle: {
+    columnProduct: {
         width: '40%',
-        fontSize: 10,
-
-        textAlign: 'left',
     },
     columnQty: {
         width: '15%',
-        fontSize: 10,
-
-        textAlign: 'left',
     },
     columnPrice: {
         width: '15%',
-        fontSize: 10,
-
         textAlign: 'right',
     },
     columnAmount: {
         width: '20%',
-        fontSize: 10,
-
         textAlign: 'right',
-    },
-    headerText: {
-        fontWeight: 600,
-        color: '#515365',
     },
     summaryContainer: {
         flexDirection: 'row',
-        marginTop: 24, // equivalent to mt-6
-        paddingHorizontal: 16, // equivalent to px-4
+        marginTop: 20,
+        paddingHorizontal: 16,
     },
-    summaryLeftColumn: {
+    paymentDetails: {
         flex: 1,
     },
-    summaryRightColumn: {
-        flex: 1,
-        gap: 4,
+    paymentTitle: {
+        fontSize: 10,
+        fontWeight: 600,
+        marginBottom: 8,
     },
-    summaryRow: {
+    paymentRow: {
         flexDirection: 'row',
-        alignItems: 'center',
+        marginBottom: 4,
     },
-    summaryLabel: {
+    paymentLabel: {
         flex: 1,
         fontSize: 10,
-
-        textAlign: 'left',
     },
-    summaryValue: {
+    paymentValue: {
         width: '37%',
         fontSize: 10,
-
         textAlign: 'right',
     },
-    summaryTotal: {
+    totalSection: {
+        width: '48%',
+    },
+    totalRow: {
         flexDirection: 'row',
-        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    grandTotal: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 8,
+        paddingTop: 8,
+        borderTopWidth: 1,
+    },
+    grandTotalDark: {
+        borderTopColor: '#191E3A',
+    },
+    grandTotalLight: {
+        borderTopColor: '#E0E6ED',
+    },
+    remainingAmount: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         marginTop: 4,
-    },
-    summaryTotalLabel: {
-        flex: 1,
-        fontSize: 12,
-        fontWeight: 'semibold',
-
-        textAlign: 'left',
-    },
-    summaryTotalValue: {
-        width: '37%',
-        fontSize: 12,
-        fontWeight: 'semibold',
-
-        textAlign: 'right',
+        color: '#EF4444',
     },
     footer: {
-        position: 'absolute',
-        bottom: 10,
-        left: 0,
-        right: 0,
+        marginTop: 40,
+        textAlign: 'center',
     },
     footerText: {
         fontSize: 10,
-
-        textAlign: 'center',
-        marginVertical: 4,
+        marginBottom: 4,
+    },
+    footerTextDark: {
+        color: '#888EA8',
+    },
+    footerTextLight: {
+        color: '#4B5563',
     },
 });
 
-const InvoicePDF = ({ items, SoftwareDetail, themeConfig }: any) => {
-    const columns = [
-        { key: 'id', label: 'S.NO', style: styles.columnId },
-        { key: 'title', label: 'ITEMS', style: styles.columnTitle },
-        { key: 'quantity', label: 'QTY', style: styles.columnQty },
-        { key: 'price', label: 'PRICE', style: styles.columnPrice },
-        { key: 'amount', label: 'AMOUNT', style: styles.columnAmount },
-    ];
+interface InvoicePDFProps {
+    invoiceData: any;
+    themeConfig: {
+        theme: 'light' | 'dark';
+    };
+}
+
+const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
+    const isLight = themeConfig.theme === 'light';
+
+    const SoftwareDetail = {
+        number1: '03212727660',
+        number2: '03122727660',
+        number3: '03054747660',
+        number4: '03125555336',
+        softwareName: 'Hamza',
+        shopName: 'AL NOOR CABLE MERCHANT',
+        shopAddress: 'Shop # 8, Subhan Allah Market, Near MashaAllah Godown, Dargah Road, Kabari Bazar, Shershah Karachi.',
+        shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
+    };
+
+    const getTotalPaidAmount = () => {
+        return Number(invoiceData.cashAmount || 0) + Number(invoiceData.bankAmount || 0) + Number(invoiceData.checkAmount || 0);
+    };
+
+    const getRemainingAmount = () => {
+        const totalPaid = getTotalPaidAmount();
+        return invoiceData.totalBillAmount - totalPaid;
+    };
+
+    const getPaymentStatus = () => {
+        const totalPaid = getTotalPaidAmount();
+        if (totalPaid >= invoiceData.totalBillAmount) {
+            return 'Fully Paid';
+        } else if (totalPaid > 0) {
+            return 'Partially Paid';
+        }
+        return 'Unpaid';
+    };
+
     return (
         <Document>
-            <Page size="A4" style={[styles.page, themeConfig.theme === 'dark' ? { backgroundColor: '#0e1726', color: '#888ea8' } : { backgroundColor: '#fff', color: '#000' }]}>
+            <Page size="A4" style={[styles.page, isLight ? styles.lightPage : styles.darkPage]}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.title}>{SoftwareDetail.shopName}</Text>
-                </View>
-
-                {/* Contact Section */}
-                <View style={styles.contactSection}>
-                    <View style={styles.contactRow}>
-                        <Text>
+                    <Text style={[styles.title, isLight ? styles.titleLight : styles.titleDark]}>{SoftwareDetail.shopName}</Text>
+                    <View style={styles.contactInfo}>
+                        <Text style={[styles.contactInfo, isLight ? styles.contactInfoLight : styles.contactInfoDark]}>
                             <Text style={styles.contactName}>{SoftwareDetail.softwareName}: </Text>
-                            <Text style={styles.contactInfo}>
-                                {SoftwareDetail.number1} | {SoftwareDetail.number2}
-                            </Text>
+                            {SoftwareDetail.number1} | {SoftwareDetail.number2}
                         </Text>
-                    </View>
-                    <View style={styles.contactRow}>
-                        <Text>
+                        <Text style={[styles.contactInfo, isLight ? styles.contactInfoLight : styles.contactInfoDark]}>
                             <Text style={styles.contactName}>Azeem Badshah: </Text>
-                            <Text style={styles.contactInfo}>
-                                {SoftwareDetail.number3} | {SoftwareDetail.number4}
-                            </Text>
+                            {SoftwareDetail.number3} | {SoftwareDetail.number4}
                         </Text>
                     </View>
                 </View>
 
-                {/* Divider */}
-                <View style={[styles.divider]} />
+                <View style={[styles.divider, isLight ? styles.dividerLight : styles.dividerDark]} />
 
                 {/* Client and Invoice Information */}
                 <View style={styles.infoContainer}>
-                    {/* Client Information */}
                     <View style={styles.infoSection}>
-                        <View style={styles.infoGrid}>
-                            <View style={styles.infoRow}>
-                                <Text style={styles.label}>Name:</Text>
-                                <Text style={styles.value}>Ali Huzaifa</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.label}>Phone Number:</Text>
-                                <Text style={styles.value}>0311 1260357</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.label}>Date:</Text>
-                                <Text style={styles.value}>13 Sep 2022</Text>
-                            </View>
+                        <View style={styles.infoRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Name:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{invoiceData.customerName}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Phone Number:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{invoiceData.phoneNumber}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Date:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{new Date(invoiceData.saleDate).toLocaleDateString()}</Text>
                         </View>
                     </View>
 
-                    {/* Invoice Information */}
                     <View style={styles.infoSection}>
-                        <View style={styles.infoGrid}>
-                            <View style={styles.infoRow}>
-                                <Text style={styles.label}>Invoice Number:</Text>
-                                <Text style={styles.value}>#8701</Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                                <Text style={styles.label}>Payment Status:</Text>
-                                <View style={styles.paymentStatusContainer}>
-                                    <Text style={styles.paymentStatus}>Fully Paid</Text>
-                                </View>
-                            </View>
-                            <View style={{ marginTop: -2 }}>
-                                <View style={styles.infoRow}>
-                                    <Text style={styles.label}>Payment Method:</Text>
-                                    <Text style={styles.value}>Bank Transfer</Text>
-                                </View>
-                            </View>
+                        <View style={styles.infoRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Invoice Number:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>#{invoiceData.id}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Payment Status:</Text>
+                            <Text style={styles.paymentStatus}>{getPaymentStatus()}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Payment Method:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{invoiceData.paymentTypes.join(', ')}</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* Table Section */}
-                <View style={styles.tableContainer}>
-                    {/* Table Header */}
-                    <View style={[styles.tableHeader, themeConfig.theme === 'dark' ? styles.tableRowStripedDark : styles.tableRowStripedLight]}>
-                        {columns.map((column) => (
-                            <Text key={column.key} style={[column.style, styles.headerText]}>
-                                {column.label}
-                            </Text>
-                        ))}
+                {/* Products Table */}
+                <View style={styles.table}>
+                    <View style={[styles.tableHeader, isLight ? styles.tableHeaderLight : styles.tableHeaderDark]}>
+                        <Text style={[styles.column, styles.columnId, isLight ? styles.valueLight : styles.valueDark]}>S.NO</Text>
+                        <Text style={[styles.column, styles.columnProduct, isLight ? styles.valueLight : styles.valueDark]}>ITEMS</Text>
+                        <Text style={[styles.column, styles.columnQty, isLight ? styles.valueLight : styles.valueDark]}>QTY</Text>
+                        <Text style={[styles.column, styles.columnPrice, isLight ? styles.valueLight : styles.valueDark]}>PRICE</Text>
+                        <Text style={[styles.column, styles.columnAmount, isLight ? styles.valueLight : styles.valueDark]}>AMOUNT</Text>
                     </View>
 
-                    {/* Table Body */}
-                    {items.map((item: any, index: number) => {
-                        // Determine the row style based on theme and even/odd pattern
-                        const rowStyle = [
-                            styles.tableRow,
-                            themeConfig.theme === 'dark' ? (index % 2 === 0 ? styles.tableRowDark : styles.tableRowStripedDark) : index % 2 === 0 ? styles.tableRowLight : styles.tableRowStripedLight,
-                        ];
-
-                        return (
-                            <View key={item.id} style={rowStyle}>
-                                <Text style={styles.columnId}>{index + 1}</Text>
-                                <Text style={styles.columnTitle}>{item.title}</Text>
-                                <Text style={styles.columnQty}>{item.quantity}</Text>
-                                <Text style={styles.columnPrice}>{item.price}</Text>
-                                <Text style={styles.columnAmount}>{item.amount}</Text>
-                            </View>
-                        );
-                    })}
+                    {invoiceData.products.map((item: any, index: number) => (
+                        <View
+                            key={item.id}
+                            style={[
+                                // Base style
+                                styles.tableRow,
+                                // Theme-specific style
+                                isLight ? styles.tableRowLight : styles.tableRowDark,
+                                // Striped style for odd rows
+                                
+                            ]}
+                        >
+                            <Text style={[styles.column, styles.columnId, isLight ? styles.valueLight : styles.valueDark]}>{index + 1}</Text>
+                            <Text style={[styles.column, styles.columnProduct, isLight ? styles.valueLight : styles.valueDark]}>{item.product}</Text>
+                            <Text style={[styles.column, styles.columnQty, isLight ? styles.valueLight : styles.valueDark]}>{item.sellingQuantity}</Text>
+                            <Text style={[styles.column, styles.columnPrice, isLight ? styles.valueLight : styles.valueDark]}>Rs. {item.price.toLocaleString()}</Text>
+                            <Text style={[styles.column, styles.columnAmount, isLight ? styles.valueLight : styles.valueDark]}>Rs. {item.totalPrice.toLocaleString()}</Text>
+                        </View>
+                    ))}
                 </View>
 
                 {/* Summary Section */}
                 <View style={styles.summaryContainer}>
-                    {/* Left empty column */}
-                    <View style={styles.summaryLeftColumn}></View>
-
-                    {/* Right column with totals */}
-                    <View style={styles.summaryRightColumn}>
-                        {/* Subtotal */}
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Subtotal</Text>
-                            <Text style={styles.summaryValue}>3255</Text>
+                    {/* Payment Details */}
+                    <View style={styles.paymentDetails}>
+                        <Text style={[styles.paymentTitle, isLight ? styles.valueLight : styles.valueDark]}>Payment Details:</Text>
+                        {invoiceData.paymentTypes.includes('cash') && (
+                            <View style={styles.paymentRow}>
+                                <Text style={[styles.paymentLabel, isLight ? styles.labelLight : styles.labelDark]}>Cash Amount:</Text>
+                                <Text style={[styles.paymentValue, isLight ? styles.valueLight : styles.valueDark]}>Rs. {Number(invoiceData.cashAmount).toLocaleString()}</Text>
+                            </View>
+                        )}
+                        {invoiceData.paymentTypes.includes('bank') && (
+                            <>
+                                <View style={styles.paymentRow}>
+                                    <Text style={[styles.paymentLabel, isLight ? styles.labelLight : styles.labelDark]}>Bank Name:</Text>
+                                    <Text style={[styles.paymentValue, isLight ? styles.valueLight : styles.valueDark]}>{invoiceData.bankName}</Text>
+                                </View>
+                                <View style={styles.paymentRow}>
+                                    <Text style={[styles.paymentLabel, isLight ? styles.labelLight : styles.labelDark]}>Bank Amount:</Text>
+                                    <Text style={[styles.paymentValue, isLight ? styles.valueLight : styles.valueDark]}>Rs. {Number(invoiceData.bankAmount).toLocaleString()}</Text>
+                                </View>
+                            </>
+                        )}
+                        {invoiceData.paymentTypes.includes('check') && (
+                            <>
+                                <View style={styles.paymentRow}>
+                                    <Text style={[styles.paymentLabel, isLight ? styles.labelLight : styles.labelDark]}>Check Number:</Text>
+                                    <Text style={[styles.paymentValue, isLight ? styles.valueLight : styles.valueDark]}>{invoiceData.checkNumber}</Text>
+                                </View>
+                                <View style={styles.paymentRow}>
+                                    <Text style={[styles.paymentLabel, isLight ? styles.labelLight : styles.labelDark]}>Check Amount:</Text>
+                                    <Text style={[styles.paymentValue, isLight ? styles.valueLight : styles.valueDark]}>Rs. {Number(invoiceData.checkAmount).toLocaleString()}</Text>
+                                </View>
+                            </>
+                        )}
+                        <View style={styles.paymentRow}>
+                            <Text style={[styles.paymentLabel, isLight ? styles.labelLight : styles.labelDark, { fontWeight: 600 }]}>Total Paid Amount:</Text>
+                            <Text style={[styles.paymentValue, isLight ? styles.valueLight : styles.valueDark, { fontWeight: 600 }]}>Rs. {getTotalPaidAmount().toLocaleString()}</Text>
                         </View>
+                    </View>
 
-                        {/* Tax */}
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Tax</Text>
-                            <Text style={styles.summaryValue}>700</Text>
+                    {/* Totals */}
+                    <View style={styles.totalSection}>
+                        <View style={styles.totalRow}>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Subtotal</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>Rs. {invoiceData.totalBillAmount.toLocaleString()}</Text>
                         </View>
-
-                        {/* Discount */}
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Discount</Text>
-                            <Text style={styles.summaryValue}>10</Text>
+                        <View style={[styles.grandTotal, isLight ? styles.grandTotalLight : styles.grandTotalDark]}>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark, { fontWeight: 700 }]}>Grand Total</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark, { fontWeight: 700 }]}>Rs. {invoiceData.totalBillAmount.toLocaleString()}</Text>
                         </View>
-
-                        {/* Grand Total */}
-                        <View style={styles.summaryTotal}>
-                            <Text style={styles.summaryTotalLabel}>Grand Total</Text>
-                            <Text style={styles.summaryTotalValue}>3945</Text>
-                        </View>
+                        {getRemainingAmount() > 0 && (
+                            <View style={styles.remainingAmount}>
+                                <Text style={[styles.value, { fontWeight: 600 }]}>Remaining Amount</Text>
+                                <Text style={[styles.value, { fontWeight: 600 }]}>Rs. {getRemainingAmount().toLocaleString()}</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
 
+                {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>{SoftwareDetail.shopAddress}</Text>
-                    <Text style={styles.footerText}>{SoftwareDetail.shopDescription}</Text>
+                    <Text style={[styles.footerText, isLight ? styles.footerTextLight : styles.footerTextDark]}>{SoftwareDetail.shopAddress}</Text>
+                    <Text style={[styles.footerText, isLight ? styles.footerTextLight : styles.footerTextDark]}>{SoftwareDetail.shopDescription}</Text>
                 </View>
             </Page>
         </Document>
