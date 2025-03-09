@@ -156,14 +156,18 @@ const KhataSale = () => {
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-    const [filterStates, setFilterStates] = useState<FilterStates>({
-        search: '',
-        dateRange: {
-            from: '',
-            to: '',
-        },
-        selectedPaymentMethod: 'all',
-    });
+    interface Customer {
+        id: number;
+        name: string;
+        phoneNumber: string;
+    }
+
+    // Add this mock data near other mock data (like products array)
+    const customers: Customer[] = [
+        { id: 1, name: 'John Doe', phoneNumber: '03001234567' },
+        { id: 2, name: 'Jane Smith', phoneNumber: '03009876543' },
+        { id: 3, name: 'Mike Johnson', phoneNumber: '03331234567' },
+    ];
 
     useEffect(() => {
         dispatch(setPageTitle('Khata Sale Form'));
@@ -613,18 +617,34 @@ const KhataSale = () => {
                             context={{ totalBillAmount: totalBillAmount }}
                             innerRef={customerFormRef}
                         >
-                            {({ errors, touched, values, submitCount }) => (
+                            {({ errors, touched, values, submitCount, setFieldValue }) => (
                                 <Form>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                         <div className={submitCount ? (errors.customerName ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="customerName">Customer Name *</label>
-                                            <Field name="customerName" type="text" className="form-input" />
+                                            <Field
+                                                as="select"
+                                                name="customerName"
+                                                className="form-select"
+                                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                    const selectedCustomer = customers.find((c) => c.name === e.target.value);
+                                                    setFieldValue('customerName', e.target.value);
+                                                    setFieldValue('phoneNumber', selectedCustomer?.phoneNumber || '');
+                                                }}
+                                            >
+                                                <option value="">Select Customer</option>
+                                                {customers.map((customer) => (
+                                                    <option key={customer.id} value={customer.name}>
+                                                        {customer.name}
+                                                    </option>
+                                                ))}
+                                            </Field>
                                             {touched.customerName && errors.customerName && <div className="text-danger mt-1">{errors.customerName}</div>}
                                         </div>
 
                                         <div className={submitCount ? (errors.phoneNumber ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="phoneNumber">Phone Number *</label>
-                                            <Field name="phoneNumber" type="text" className="form-input" />
+                                            <Field name="phoneNumber" type="text" className="form-input" disabled />
                                             {touched.phoneNumber && errors.phoneNumber && <div className="text-danger mt-1">{errors.phoneNumber}</div>}
                                         </div>
 
