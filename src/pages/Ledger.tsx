@@ -1,4 +1,5 @@
-interface LedgerItem {
+// Interfaces for Ledger Props
+interface Product {
     id: number;
     product: string;
     availableQuantity: number;
@@ -10,7 +11,7 @@ interface LedgerItem {
 interface Transaction {
     id: number;
     date: string;
-    products: LedgerItem[];
+    products: Product[];
     totalAmount: number;
     paidAmount: number;
 }
@@ -18,7 +19,7 @@ interface Transaction {
 interface Payment {
     date: string;
     amount: number;
-    paymentType: string;
+    paymentType: 'cash' | 'bank' | 'check';
     bankName?: string;
     checkNumber?: string;
 }
@@ -35,63 +36,119 @@ interface LedgerProps {
     ledgerData: LedgerRecord;
 }
 
-const SoftwareDetail = {
-    number1: '03212727660',
-    number2: '03122727660',
-    number3: '03054747660',
-    number4: '03125555336',
-    softwareName: 'Hamza',
-    shopName: 'AL NOOR CABLE MERCHANT',
-    shopAddress: 'Shop # 8, Subhan Allah Market, Near MashaAllah Godown, Dargah Road, Kabari Bazar, Shershah Karachi.',
-    shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
-};
-
 const Ledger = ({ ledgerData }: LedgerProps) => {
     const columns = [
-        { key: 'id', label: 'S.NO' },
+        { key: 'sno', label: 'S.NO' },
         { key: 'date', label: 'DATE' },
         { key: 'description', label: 'DESCRIPTION' },
+        { key: 'quantity', label: 'QTY' },
+        { key: 'price', label: 'PRICE' },
+        { key: 'amount', label: 'AMOUNT' },
         { key: 'debit', label: 'DEBIT' },
         { key: 'credit', label: 'CREDIT' },
+        { key: 'paymentType', label: 'PAYMENT TYPE' },
         { key: 'balance', label: 'BALANCE' },
     ];
 
     const calculateRunningBalance = () => {
         let balance = 0;
-        return ledgerData.transactions.map((transaction) => {
-            balance += transaction.totalAmount - transaction.paidAmount;
-            return balance;
+        const rows: Array<{ type: string; balance: number }> = [];
+
+        ledgerData.transactions.forEach((transaction: { products: Array<{ totalPrice: number }>; paidAmount: number }) => {
+            if (transaction.products.length > 0) {
+                // Purchase entries
+                transaction.products.forEach((product: { totalPrice: number }) => {
+                    balance += product.totalPrice;
+                    rows.push({
+                        type: 'product',
+                        balance: balance,
+                    });
+                });
+            }
+            if (transaction.paidAmount > 0) {
+                // Payment entry
+                balance -= transaction.paidAmount;
+                rows.push({
+                    type: 'payment',
+                    balance: balance,
+                });
+            }
         });
+
+        return rows;
     };
 
-    const getTotalBalance = () => {
-        const totalBilled = ledgerData.transactions.reduce((sum, t) => sum + t.totalAmount, 0);
-        const totalPaid = ledgerData.transactions.reduce((sum, t) => sum + t.paidAmount, 0);
-        return totalBilled - totalPaid;
+    const formatLedgerRows = () => {
+        let sno = 1;
+        const rows: any[] = [];
+        const balances = calculateRunningBalance();
+        let balanceIndex = 0;
+
+        ledgerData.transactions.forEach((transaction: { products: Array<{ product: string; sellingQuantity: number; price: number; totalPrice: number }>; date: string }) => {
+            if (transaction.products.length > 0) {
+                // Add product entries
+                transaction.products.forEach((product: { product: string; sellingQuantity: number; price: number; totalPrice: number }) => {
+                    rows.push({
+                        sno: sno++,
+                        date: new Date(transaction.date).toLocaleDateString(),
+                        description: product.product,
+                        quantity: product.sellingQuantity,
+                        price: product.price,
+                        amount: product.totalPrice,
+                        debit: product.totalPrice,
+                        credit: '-',
+                        paymentType: '-',
+                        balance: balances[balanceIndex++].balance,
+                    });
+                });
+            }
+
+            if ((transaction as any).paidAmount > 0) {
+                // Find corresponding payment details
+                const payment = ledgerData.paymentHistory.find((p: { date: string }) => p.date === transaction.date);
+                let paymentDetails = '';
+
+                if (payment) {
+                    switch (payment.paymentType) {
+                        case 'cash':
+                            paymentDetails = 'Cash Payment';
+                            break;
+                        case 'bank':
+                            paymentDetails = `Bank: ${payment.bankName}`;
+                            break;
+                        case 'check':
+                            paymentDetails = `Check #${payment.checkNumber}`;
+                            break;
+                    }
+                }
+
+                rows.push({
+                    sno: sno++,
+                    date: new Date(transaction.date).toLocaleDateString(),
+                    description: 'Payment Received',
+                    quantity: '-',
+                    price: '-',
+                    amount: transaction.products.reduce((sum, product) => sum + product.totalPrice, 0),
+                    debit: '-',
+                    credit: transaction.products.reduce((sum, product) => sum + product.totalPrice, 0),
+                    paymentType: paymentDetails,
+                    balance: balances[balanceIndex++].balance,
+                });
+            }
+        });
+
+        return rows;
     };
 
-    const formatTransactionRow = (transaction: Transaction, index: number) => {
-        if (transaction.products.length > 0) {
-            // This is a purchase transaction
-            return {
-                sno: index + 1,
-                date: new Date(transaction.date).toLocaleDateString(),
-                description: transaction.products.map((p) => `${p.product} (${p.sellingQuantity} × Rs.${p.price})`).join(', '),
-                debit: transaction.totalAmount,
-                credit: 0,
-                balance: calculateRunningBalance()[index],
-            };
-        } else {
-            // This is a payment transaction
-            return {
-                sno: index + 1,
-                date: new Date(transaction.date).toLocaleDateString(),
-                description: 'Payment Received',
-                debit: 0,
-                credit: transaction.paidAmount,
-                balance: calculateRunningBalance()[index],
-            };
-        }
+    const SoftwareDetail = {
+        number1: '03212727660',
+        number2: '03122727660',
+        number3: '03054747660',
+        number4: '03125555336',
+        softwareName: 'Hamza',
+        shopName: 'AL NOOR CABLE MERCHANT',
+        shopAddress: 'Shop # 8, Subhan Allah Market, Near MashaAllah Godown, Dargah Road, Kabari Bazar, Shershah Karachi.',
+        shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
     };
 
     return (
@@ -101,9 +158,6 @@ const Ledger = ({ ledgerData }: LedgerProps) => {
             <div className="mt-2 text-end">
                 <span className="font-semibold">{SoftwareDetail.softwareName}: </span>
                 {SoftwareDetail.number1} | {SoftwareDetail.number2}
-                <br />
-                <span className="font-semibold">Azeem Badshah:</span>
-                {SoftwareDetail.number3} | {SoftwareDetail.number4}
             </div>
             <hr className="border-white-light dark:border-[#1b2e4b] my-6" />
 
@@ -113,7 +167,6 @@ const Ledger = ({ ledgerData }: LedgerProps) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="text-gray-600 dark:text-gray-400">Name:</div>
                         <div className="font-semibold">{ledgerData.customerName}</div>
-
                         <div className="text-gray-600 dark:text-gray-400">Phone Number:</div>
                         <div className="font-semibold">{ledgerData.phoneNumber}</div>
                     </div>
@@ -122,9 +175,6 @@ const Ledger = ({ ledgerData }: LedgerProps) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="text-gray-600 dark:text-gray-400">Khata Number:</div>
                         <div className="font-semibold">#{ledgerData.id}</div>
-
-                        <div className="text-gray-600 dark:text-gray-400">Total Balance:</div>
-                        <div className="font-semibold text-red-500">Rs. {getTotalBalance().toLocaleString()}</div>
                     </div>
                 </div>
             </div>
@@ -142,19 +192,20 @@ const Ledger = ({ ledgerData }: LedgerProps) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {ledgerData.transactions.map((transaction, index) => {
-                            const row = formatTransactionRow(transaction, index);
-                            return (
-                                <tr key={transaction.id}>
-                                    <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.sno}</td>
-                                    <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.date}</td>
-                                    <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.description}</td>
-                                    <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3 text-right">{row.debit > 0 ? `Rs. ${row.debit.toLocaleString()}` : '-'}</td>
-                                    <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3 text-right">{row.credit > 0 ? `Rs. ${row.credit.toLocaleString()}` : '-'}</td>
-                                    <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3 text-right">Rs. {row.balance.toLocaleString()}</td>
-                                </tr>
-                            );
-                        })}
+                        {formatLedgerRows().map((row, index) => (
+                            <tr key={index}>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.sno}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.date}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.description}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.quantity}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.price !== '-' ? `Rs. ${row.price.toLocaleString()}` : '-'}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.amount !== '-' ? `Rs. ${row.amount.toLocaleString()}` : '-'}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.debit !== '-' ? `Rs. ${row.debit.toLocaleString()}` : '-'}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.credit !== '-' ? `Rs. ${row.credit.toLocaleString()}` : '-'}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3">{row.paymentType}</td>
+                                <td className="border-b border-[#e0e6ed] dark:border-[#1b2e4b] p-3 text-right">Rs. {row.balance.toLocaleString()}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>

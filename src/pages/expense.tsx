@@ -5,7 +5,6 @@ import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import { downloadExcel } from 'react-export-table-to-excel';
-import { capitalize } from 'lodash';
 
 interface Expense {
     id: number;
