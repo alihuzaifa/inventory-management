@@ -146,9 +146,7 @@ const productSchema = Yup.object().shape({
 });
 
 const paymentUpdateSchema = Yup.object().shape({
-    paymentTypes: Yup.array()
-        .of(Yup.string())
-        .min(1, 'At least one payment type is required'),
+    paymentTypes: Yup.array().of(Yup.string()).min(1, 'At least one payment type is required'),
     cashAmount: Yup.string().when('paymentTypes', {
         is: (types: string[]) => types?.includes('cash'),
         then: (schema) => schema.required('Cash amount is required'),
@@ -578,10 +576,10 @@ const Invoice = () => {
                         validationSchema={productSchema}
                         onSubmit={handleAddProduct}
                     >
-                        {({ errors, touched, values, setFieldValue }) => (
+                        {({ errors, touched, values, setFieldValue, submitCount }) => (
                             <Form>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
+                                    <div className={submitCount ? (errors.product ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="product">Product *</label>
                                         <Field as="select" name="product" className="form-select">
                                             <option value="">Select Product</option>
@@ -591,12 +589,12 @@ const Invoice = () => {
                                                 </option>
                                             ))}
                                         </Field>
-                                        {touched.product && errors.product && <div className="text-danger mt-1">{errors.product}</div>}
+                                        {submitCount > 0 && errors.product && <div className="text-danger mt-1">{errors.product}</div>}
                                     </div>
 
                                     {values.product && (
                                         <>
-                                            <div>
+                                            <div className={submitCount ? (errors.availableQuantity ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="availableQuantity">Available Qty *</label>
                                                 <Field as="select" name="availableQuantity" className="form-select">
                                                     <option value="">Select Quantity</option>
@@ -611,7 +609,7 @@ const Invoice = () => {
                                                 {touched.availableQuantity && errors.availableQuantity && <div className="text-danger mt-1">{errors.availableQuantity}</div>}
                                             </div>
 
-                                            <div>
+                                            <div className={submitCount ? (errors.sellingQuantity ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="sellingQuantity">Selling Qty *</label>
                                                 <Field
                                                     name="sellingQuantity"
@@ -628,7 +626,7 @@ const Invoice = () => {
                                                 {touched.sellingQuantity && errors.sellingQuantity && <div className="text-danger mt-1">{errors.sellingQuantity}</div>}
                                             </div>
 
-                                            <div>
+                                            <div className={submitCount ? (errors.price ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="price">Price *</label>
                                                 <Field
                                                     name="price"
@@ -645,7 +643,7 @@ const Invoice = () => {
                                                 {touched.price && errors.price && <div className="text-danger mt-1">{errors.price}</div>}
                                             </div>
 
-                                            <div>
+                                            <div className={submitCount ? (errors.totalPrice ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="totalPrice">Total Price</label>
                                                 <Field name="totalPrice" type="number" className="form-input" disabled />
                                             </div>
@@ -729,23 +727,23 @@ const Invoice = () => {
                             context={{ totalBillAmount: totalBillAmount }}
                             innerRef={customerFormRef}
                         >
-                            {({ errors, touched, values }) => (
+                            {({ errors, touched, values, submitCount }) => (
                                 <Form>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                        <div>
+                                        <div className={submitCount ? (errors.customerName ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="customerName">Customer Name *</label>
                                             <Field name="customerName" type="text" className="form-input" />
                                             {touched.customerName && errors.customerName && <div className="text-danger mt-1">{errors.customerName}</div>}
                                         </div>
 
-                                        <div>
+                                        <div className={submitCount ? (errors.phoneNumber ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="phoneNumber">Phone Number *</label>
                                             <Field name="phoneNumber" type="text" className="form-input" />
                                             {touched.phoneNumber && errors.phoneNumber && <div className="text-danger mt-1">{errors.phoneNumber}</div>}
                                         </div>
 
                                         {/* Add Bill Type Dropdown */}
-                                        <div>
+                                        <div className={submitCount ? (errors.billType ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="billType">Bill Type *</label>
                                             <Field as="select" name="billType" className="form-select">
                                                 <option value="perfect">Perfect Bill</option>
@@ -754,7 +752,7 @@ const Invoice = () => {
                                             {touched.billType && errors.billType && <div className="text-danger mt-1">{errors.billType}</div>}
                                         </div>
 
-                                        <div>
+                                        <div className={submitCount ? (errors.paymentTypes ? 'has-error' : 'has-success') : ''}>
                                             <label>Payment Types *</label>
                                             <div className="mt-2">
                                                 <label className="inline-flex items-center mr-3">
@@ -776,7 +774,7 @@ const Invoice = () => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
                                         {values.paymentTypes?.includes('cash') && (
-                                            <div>
+                                            <div className={submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="cashAmount">Cash Amount *</label>
                                                 <Field name="cashAmount" type="text" className="form-input" />
                                                 {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
@@ -785,12 +783,12 @@ const Invoice = () => {
 
                                         {values.paymentTypes.includes('bank') && (
                                             <>
-                                                <div>
+                                                <div className={submitCount ? (errors.bankName ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="bankName">Bank Name *</label>
                                                     <Field name="bankName" type="text" className="form-input" />
                                                     {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
                                                 </div>
-                                                <div>
+                                                <div className={submitCount ? (errors.bankAmount ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="bankAmount">Bank Amount *</label>
                                                     <Field name="bankAmount" type="text" className="form-input" />
                                                     {touched.bankAmount && errors.bankAmount && <div className="text-danger mt-1">{errors.bankAmount}</div>}
@@ -800,12 +798,12 @@ const Invoice = () => {
 
                                         {values.paymentTypes.includes('check') && (
                                             <>
-                                                <div>
+                                                <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="checkNumber">Check Number *</label>
                                                     <Field name="checkNumber" type="text" className="form-input" />
                                                     {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
                                                 </div>
-                                                <div>
+                                                <div className={submitCount ? (errors.checkAmount ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="checkAmount">Check Amount *</label>
                                                     <Field name="checkAmount" type="text" className="form-input" />
                                                     {touched.checkAmount && errors.checkAmount && <div className="text-danger mt-1">{errors.checkAmount}</div>}
@@ -953,8 +951,8 @@ const Invoice = () => {
 
             {/* Invoice View Modal */}
             {isViewModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-[999]">
-                    <div className="flex items-start justify-center min-h-screen px-4">
+                <div className="fixed inset-0 z-[999]">
+                    <div className="flex items-start justify-center min-h-screen px-4 overflow-y-auto">
                         <div className="bg-white dark:bg-navy-700 mt-10 rounded-lg w-full max-w-5xl">
                             <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
                                 <h5 className="text-lg font-semibold">Invoice Preview</h5>
@@ -989,7 +987,7 @@ const Invoice = () => {
             )}
 
             {isPaymentModalOpen && selectedInvoiceForPayment && (
-                <div className="fixed inset-0 z-[999]">
+                <div className="fixed top-16 inset-0 z-[999] shadow-2xl overflow-auto">
                     <div className="flex items-start justify-center min-h-screen px-4">
                         <div className="panel rounded-lg w-full max-w-lg">
                             <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
@@ -1046,9 +1044,9 @@ const Invoice = () => {
                                         handlePaymentSubmit(values);
                                     }}
                                 >
-                                    {({ values, errors, touched }) => (
+                                    {({ values, errors, touched, submitCount }) => (
                                         <Form className="space-y-5">
-                                            <div>
+                                            <div className={submitCount ? (errors.paymentTypes ? 'has-error' : 'has-success') : ''}>
                                                 <label className="mb-2 block">Payment Types</label>
                                                 <div className="flex gap-4">
                                                     <label className="inline-flex">
@@ -1068,7 +1066,7 @@ const Invoice = () => {
                                             </div>
 
                                             {values.paymentTypes.includes('cash') && (
-                                                <div>
+                                                <div className={submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}>
                                                     <label>Cash Amount</label>
                                                     <Field name="cashAmount" type="number" className="form-input" />
                                                     {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
@@ -1077,12 +1075,12 @@ const Invoice = () => {
 
                                             {values.paymentTypes.includes('bank') && (
                                                 <>
-                                                    <div>
+                                                    <div className={submitCount ? (errors.bankAmount ? 'has-error' : 'has-success') : ''}>
                                                         <label>Bank Amount</label>
                                                         <Field name="bankAmount" type="number" className="form-input" />
                                                         {touched.bankAmount && errors.bankAmount && <div className="text-danger mt-1">{errors.bankAmount}</div>}
                                                     </div>
-                                                    <div>
+                                                    <div className={submitCount ? (errors.bankName ? 'has-error' : 'has-success') : ''}>
                                                         <label>Bank Name</label>
                                                         <Field name="bankName" type="text" className="form-input" />
                                                         {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
@@ -1092,12 +1090,12 @@ const Invoice = () => {
 
                                             {values.paymentTypes.includes('check') && (
                                                 <>
-                                                    <div>
+                                                    <div className={submitCount ? (errors.checkAmount ? 'has-error' : 'has-success') : ''}>
                                                         <label>Check Amount</label>
                                                         <Field name="checkAmount" type="number" className="form-input" />
                                                         {touched.checkAmount && errors.checkAmount && <div className="text-danger mt-1">{errors.checkAmount}</div>}
                                                     </div>
-                                                    <div>
+                                                    <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
                                                         <label>Check Number</label>
                                                         <Field name="checkNumber" type="text" className="form-input" />
                                                         {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
