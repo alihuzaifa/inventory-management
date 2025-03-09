@@ -50,29 +50,17 @@ Font.register({
 });
 
 const styles = StyleSheet.create({
-    page: {
-        fontFamily: 'Nunito',
-        backgroundColor: '#ffffff',
-        paddingHorizontal: 10,
-        paddingVertical: 30,
-    },
-    header: {
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 24,
-        textAlign: 'center',
-        fontWeight: 800,
-        color: '#000000',
-        marginBottom: 10,
-        textTransform: 'uppercase',
-    },
-    contactInfo: {
-        textAlign: 'right',
-        fontSize: 10,
-        color: '#888EA8',
-        marginBottom: 5,
-    },
+    page: { fontFamily: 'Nunito', backgroundColor: '#ffffff', paddingVertical: 30 },
+    darkPage: { backgroundColor: '#1B2E4B', color: '#888EA8' },
+    lightPage: { backgroundColor: '#FFFFFF', color: '#000000' },
+    header: { marginBottom: 20, paddingHorizontal: 30 },
+    title: { fontSize: 24, textAlign: 'center', fontWeight: 800, color: '#000000', marginBottom: 10, textTransform: 'uppercase' },
+    titleDark: { color: '#888EA8' },
+    titleLight: { color: '#000000' },
+    contactInfo: { marginTop: 8, textAlign: 'right', fontSize: 10 },
+    contactInfoDark: { color: '#888EA8' },
+    contactInfoLight: { color: '#4B5563' },
+    contactName: { fontWeight: 600 },
     contactLabel: {
         fontWeight: 600,
     },
@@ -80,12 +68,9 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#e0e6ed',
         marginVertical: 15,
+        paddingHorizontal: 30,
     },
-    infoContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-    },
+    infoContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, paddingHorizontal: 30 },
     infoSection: {
         width: '48%',
     },
@@ -98,6 +83,12 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#888EA8',
     },
+    labelDark: {
+        color: '#888EA8',
+    },
+    labelLight: {
+        color: '#4B5563',
+    },
     value: {
         fontSize: 10,
         color: '#000000',
@@ -106,22 +97,14 @@ const styles = StyleSheet.create({
     table: {
         marginTop: 24,
     },
-    tableHeader: {
-        flexDirection: 'row',
-        backgroundColor: '#f8f9fa',
-        padding: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e6ed',
-    },
-    tableRow: {
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e6ed',
-        padding: 12,
-    },
-    tableRowEven: {
-        backgroundColor: '#f8f9fa',
-    },
+    tableHeader: { flexDirection: 'row', padding: '12 16' },
+    tableHeaderDark: { backgroundColor: '#1A2941' },
+    tableHeaderLight: { backgroundColor: '#F6F8FA' },
+    tableRow: { flexDirection: 'row', borderBottomWidth: 1, padding: '12 16' },
+    tableRowDark: { borderBottomColor: '#191E3A' },
+    tableRowLight: { borderBottomColor: '#E0E6ED' },
+    tableRowStriped: { backgroundColor: 'rgba(26, 41, 65, 0.4)' },
+    tableRowStripedLight: { backgroundColor: 'rgba(246, 248, 250, 0.5)' },
     column: {
         fontSize: 9,
         color: '#000000',
@@ -131,24 +114,20 @@ const styles = StyleSheet.create({
         color: '#000000',
         fontWeight: 600,
     },
-    columnSNo: { width: '4%' },
-    columnDate: { width: '8%' },
-    columnDescription: { width: '15%' },
+    valueDark: { color: '#888EA8' },
+    valueLight: { color: '#000000' },
+    columnDate: { width: '10%' },
+    columnDescription: { width: '23%' }, // Increased width for description
     columnQty: { width: '6%', textAlign: 'center' },
     columnPrice: { width: '8%', textAlign: 'right' },
     columnAmount: { width: '10%', textAlign: 'right' },
     columnDebit: { width: '10%', textAlign: 'right' },
     columnCredit: { width: '10%', textAlign: 'right' },
     columnPaymentType: {
-        width: '19%',
+        width: '13%',
         paddingLeft: 6,
     },
     columnBalance: { width: '10%', textAlign: 'right' },
-    creditPaymentSeparator: {
-        borderRightWidth: 1,
-        borderRightColor: '#e0e6ed',
-        marginHorizontal: 4,
-    },
     footer: {
         position: 'absolute',
         bottom: 30,
@@ -174,7 +153,7 @@ const SoftwareDetail = {
     shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
 };
 
-const LedgerPDF = ({ ledgerData }: LedgerPDFProps) => {
+const LedgerPDF = ({ ledgerData, themeConfig }: LedgerPDFProps) => {
     const calculateRunningBalance = () => {
         let balance = 0;
         const rows: Array<{ type: string; balance: number }> = [];
@@ -260,20 +239,22 @@ const LedgerPDF = ({ ledgerData }: LedgerPDFProps) => {
 
         return rows;
     };
-
+    const isLight = themeConfig.theme === 'light' || themeConfig.theme === 'system';
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
+            <Page size="A4" style={[styles.page, isLight ? styles.lightPage : styles.darkPage]}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>{SoftwareDetail.shopName}</Text>
-                    <Text style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>{SoftwareDetail.softwareName}: </Text>
-                        {SoftwareDetail.number1} | {SoftwareDetail.number2}
-                    </Text>
-                    <Text style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>Azeem Badshah: </Text>
-                        {SoftwareDetail.number3} | {SoftwareDetail.number4}
-                    </Text>
+                    <Text style={[styles.title, isLight ? styles.titleLight : styles.titleDark]}>{SoftwareDetail.shopName}</Text>
+                    <View style={styles.contactInfo}>
+                        <Text style={[styles.contactInfo, isLight ? styles.contactInfoLight : styles.contactInfoDark]}>
+                            <Text style={styles.contactName}>{SoftwareDetail.softwareName}: </Text>
+                            {SoftwareDetail.number1} | {SoftwareDetail.number2}
+                        </Text>
+                        <Text style={[styles.contactInfo, isLight ? styles.contactInfoLight : styles.contactInfoDark]}>
+                            <Text style={styles.contactName}>Azeem Badshah: </Text>
+                            {SoftwareDetail.number3} | {SoftwareDetail.number4}
+                        </Text>
+                    </View>
                 </View>
 
                 <View style={styles.divider} />
@@ -281,50 +262,46 @@ const LedgerPDF = ({ ledgerData }: LedgerPDFProps) => {
                 <View style={styles.infoContainer}>
                     <View style={styles.infoSection}>
                         <View style={styles.infoRow}>
-                            <Text style={styles.label}>Name:</Text>
-                            <Text style={styles.value}>{ledgerData.customerName}</Text>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Name:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{ledgerData.customerName}</Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.label}>Phone Number:</Text>
-                            <Text style={styles.value}>{ledgerData.phoneNumber}</Text>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Phone Number:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{ledgerData.phoneNumber}</Text>
                         </View>
                     </View>
                     <View style={styles.infoSection}>
                         <View style={styles.infoRow}>
-                            <Text style={styles.label}>Khata Number:</Text>
-                            <Text style={styles.value}>#{ledgerData.id}</Text>
+                            <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Khata Number:</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>#{ledgerData.id}</Text>
                         </View>
                     </View>
                 </View>
 
                 <View style={styles.table}>
-                    <View style={styles.tableHeader}>
-                        <Text style={[styles.columnHeader, styles.columnSNo]}>S.NO</Text>
-                        <Text style={[styles.columnHeader, styles.columnDate]}>DATE</Text>
-                        <Text style={[styles.columnHeader, styles.columnDescription]}>DESCRIPTION</Text>
-                        <Text style={[styles.columnHeader, styles.columnQty]}>QTY</Text>
-                        <Text style={[styles.columnHeader, styles.columnPrice]}>PRICE</Text>
-                        <Text style={[styles.columnHeader, styles.columnAmount]}>AMOUNT</Text>
-                        <Text style={[styles.columnHeader, styles.columnDebit]}>DEBIT</Text>
-                        <Text style={[styles.columnHeader, styles.columnCredit]}>CREDIT</Text>
-                        <View style={styles.creditPaymentSeparator} />
-                        <Text style={[styles.columnHeader, styles.columnPaymentType]}>PAYMENT TYPE</Text>
-                        <Text style={[styles.columnHeader, styles.columnBalance]}>BALANCE</Text>
+                    <View style={[styles.tableHeader, isLight ? styles.tableHeaderLight : styles.tableHeaderDark]}>
+                        <Text style={[styles.columnHeader, styles.columnDate, isLight ? styles.valueLight : styles.valueDark]}>DATE</Text>
+                        <Text style={[styles.columnHeader, styles.columnDescription, isLight ? styles.valueLight : styles.valueDark]}>DESCRIPTION</Text>
+                        <Text style={[styles.columnHeader, styles.columnQty, isLight ? styles.valueLight : styles.valueDark]}>QTY</Text>
+                        <Text style={[styles.columnHeader, styles.columnPrice, isLight ? styles.valueLight : styles.valueDark]}>PRICE</Text>
+                        <Text style={[styles.columnHeader, styles.columnAmount, isLight ? styles.valueLight : styles.valueDark]}>AMOUNT</Text>
+                        <Text style={[styles.columnHeader, styles.columnDebit, isLight ? styles.valueLight : styles.valueDark]}>DEBIT</Text>
+                        <Text style={[styles.columnHeader, styles.columnCredit, isLight ? styles.valueLight : styles.valueDark]}>CREDIT</Text>
+                        <Text style={[styles.columnHeader, styles.columnPaymentType, isLight ? styles.valueLight : styles.valueDark]}>PAYMENT TYPE</Text>
+                        <Text style={[styles.columnHeader, styles.columnBalance, isLight ? styles.valueLight : styles.valueDark]}>BALANCE</Text>
                     </View>
 
                     {formatLedgerRows().map((row, index) => (
-                        <View key={index} style={[styles.tableRow]}>
-                            <Text style={[styles.column, styles.columnSNo]}>{row.sno}</Text>
-                            <Text style={[styles.column, styles.columnDate]}>{row.date}</Text>
-                            <Text style={[styles.column, styles.columnDescription]}>{row.description}</Text>
-                            <Text style={[styles.column, styles.columnQty]}>{row.quantity}</Text>
-                            <Text style={[styles.column, styles.columnPrice]}>{row.price !== '-' ? `Rs. ${row.price.toLocaleString()}` : '-'}</Text>
-                            <Text style={[styles.column, styles.columnAmount]}>{row.amount !== '-' ? `Rs. ${row.amount.toLocaleString()}` : '-'}</Text>
-                            <Text style={[styles.column, styles.columnDebit]}>{row.debit !== '-' ? `Rs. ${row.debit.toLocaleString()}` : '-'}</Text>
-                            <Text style={[styles.column, styles.columnCredit]}>{row.credit !== '-' ? `Rs. ${row.credit.toLocaleString()}` : '-'}</Text>
-                            <View style={styles.creditPaymentSeparator} />
-                            <Text style={[styles.column, styles.columnPaymentType]}>{row.paymentType}</Text>
-                            <Text style={[styles.column, styles.columnBalance]}>Rs. {row.balance.toLocaleString()}</Text>
+                        <View key={index} style={[styles.tableRow, isLight ? styles.tableRowLight : styles.tableRowDark]}>
+                            <Text style={[styles.column, styles.columnDate, isLight ? styles.valueLight : styles.valueDark]}>{row.date}</Text>
+                            <Text style={[styles.column, styles.columnDescription, isLight ? styles.valueLight : styles.valueDark]}>{row.description}</Text>
+                            <Text style={[styles.column, styles.columnQty, isLight ? styles.valueLight : styles.valueDark]}>{row.quantity}</Text>
+                            <Text style={[styles.column, styles.columnPrice, isLight ? styles.valueLight : styles.valueDark]}>{row.price !== '-' ? `Rs. ${row.price.toLocaleString()}` : '-'}</Text>
+                            <Text style={[styles.column, styles.columnAmount, isLight ? styles.valueLight : styles.valueDark]}>{row.amount !== '-' ? `Rs. ${row.amount.toLocaleString()}` : '-'}</Text>
+                            <Text style={[styles.column, styles.columnDebit, isLight ? styles.valueLight : styles.valueDark]}>{row.debit !== '-' ? `Rs. ${row.debit.toLocaleString()}` : '-'}</Text>
+                            <Text style={[styles.column, styles.columnCredit, isLight ? styles.valueLight : styles.valueDark]}>{row.credit !== '-' ? `Rs. ${row.credit.toLocaleString()}` : '-'}</Text>
+                            <Text style={[styles.column, styles.columnPaymentType, isLight ? styles.valueLight : styles.valueDark]}>{row.paymentType}</Text>
+                            <Text style={[styles.column, styles.columnBalance, isLight ? styles.valueLight : styles.valueDark]}>Rs. {row.balance.toLocaleString()}</Text>
                         </View>
                     ))}
                 </View>

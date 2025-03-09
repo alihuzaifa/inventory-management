@@ -263,7 +263,7 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
         shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
     };
 
-    const isLight = themeConfig.theme === 'light';
+    const isLight = themeConfig.theme === 'light' || themeConfig.theme === 'system';
 
     return (
         <Document>
@@ -328,13 +328,7 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
                     </View>
 
                     {invoiceData.products.map((item: any, index: number) => (
-                        <View
-                            key={item.id}
-                            style={[
-                                styles.tableRow,
-                                isLight ? styles.tableRowLight : styles.tableRowDark,
-                            ]}
-                        >
+                        <View key={item.id} style={[styles.tableRow, isLight ? styles.tableRowLight : styles.tableRowDark]}>
                             <Text style={[styles.column, styles.columnId, isLight ? styles.valueLight : styles.valueDark]}>{index + 1}</Text>
                             <Text style={[styles.column, styles.columnProduct, isLight ? styles.valueLight : styles.valueDark]}>{item.product}</Text>
                             <Text style={[styles.column, styles.columnQty, isLight ? styles.valueLight : styles.valueDark]}>{item.sellingQuantity}</Text>
@@ -343,7 +337,7 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
                         </View>
                     ))}
                 </View>
-                
+
                 <View style={styles.summaryContainer}>
                     {/* Payment Details */}
                     <View style={styles.paymentDetails}>

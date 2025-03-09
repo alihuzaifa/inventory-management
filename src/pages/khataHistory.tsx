@@ -500,7 +500,7 @@ const KhataHistory = () => {
                                                 <IconEye className="w-4 h-4" />
                                             </button>
                                             {ledgerData && (
-                                                <PDFDownloadLink document={<LedgerPDF ledgerData={ledgerData} themeConfig={theme} />} fileName="invoice.pdf">
+                                                <PDFDownloadLink document={<LedgerPDF ledgerData={ledgerData} themeConfig={theme} />} fileName="Ledger.pdf">
                                                     {({ loading }) => (
                                                         <button type="button" className="btn btn-sm btn-primary">
                                                             {loading ? 'Loading...' : <IconDownload />}
