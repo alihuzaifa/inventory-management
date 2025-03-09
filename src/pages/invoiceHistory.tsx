@@ -10,7 +10,12 @@ import Swal from 'sweetalert2';
 import { lazy } from 'react';
 import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
-const InvoicePdf = lazy(() => import('./Invoice'));
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import InvoicePDF from '../components/InvoicePdf';
+import IconDownload from '../components/Icon/IconDownload';
+import IconPlus from '../components/Icon/IconPlus';
+import themeConfig from '../theme.config';
+const InvoiceView = lazy(() => import('./Invoice'));
 
 // Payment Types
 type PaymentType = 'cash' | 'bank' | 'check';
@@ -460,27 +465,9 @@ const InvoiceHistory = () => {
     };
 
     // Define columns for export
-    const col = [
-        'id',
-        'customerName',
-        'phoneNumber',
-        'totalBillAmount',
-        'remainingAmount',
-        'billType',
-        'paymentTypes',
-        'saleDate'
-    ];
+    const col = ['id', 'customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
 
-    const header = [
-        'Invoice #',
-        'Customer',
-        'Phone',
-        'Total Amount',
-        'Remaining Amount',
-        'Bill Type',
-        'Payment Method',
-        'Date'
-    ];
+    const header = ['Invoice #', 'Customer', 'Phone', 'Total Amount', 'Remaining Amount', 'Bill Type', 'Payment Method', 'Date'];
 
     // Replace the existing export functions with these
     const exportTable = (type: string) => {
@@ -690,9 +677,7 @@ const InvoiceHistory = () => {
                             className="form-input w-auto"
                             placeholder="Search..."
                             value={filterStates.search}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                                setFilterStates({ ...filterStates, search: e.target.value })
-                            }
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterStates({ ...filterStates, search: e.target.value })}
                         />
                     </div>
                 </div>
@@ -751,9 +736,16 @@ const InvoiceHistory = () => {
                                         <button className="btn btn-sm btn-primary" onClick={() => handleViewInvoice(row)}>
                                             <IconEye className="w-4 h-4" />
                                         </button>
+                                        <PDFDownloadLink document={<InvoicePDF invoiceData={row} themeConfig={themeConfig} />} fileName="invoice.pdf">
+                                            {({ loading }) => (
+                                                <button type="button" className="btn btn-sm btn-primary">
+                                                    {loading ? 'Loading...' : <IconDownload />}
+                                                </button>
+                                            )}
+                                        </PDFDownloadLink>
                                         {calculateRemainingAmount(row) > 0 && (
                                             <button className="btn btn-sm btn-success" onClick={() => handleAddPayment(row)}>
-                                                Add Payment
+                                                <IconPlus />
                                             </button>
                                         )}
                                         <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row.id)}>
@@ -808,7 +800,7 @@ const InvoiceHistory = () => {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="p-5">{selectedInvoice && <InvoicePdf invoiceData={selectedInvoice} />}</div>
+                            <div className="p-5">{selectedInvoice && <InvoiceView invoiceData={selectedInvoice} />}</div>
                         </div>
                     </div>
                 </div>

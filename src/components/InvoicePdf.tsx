@@ -1,6 +1,5 @@
 import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer';
 
-// Register fonts
 Font.register({
     family: 'Nunito',
     fonts: [
@@ -161,6 +160,7 @@ const styles = StyleSheet.create({
     },
     paymentDetails: {
         flex: 1,
+        marginRight: 10,
     },
     paymentTitle: {
         fontSize: 10,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
         textAlign: 'right',
     },
     totalSection: {
-        width: '48%',
+        width: '25%',
     },
     totalRow: {
         flexDirection: 'row',
@@ -221,36 +221,25 @@ const styles = StyleSheet.create({
     footerTextLight: {
         color: '#4B5563',
     },
+    columnHeader: {
+        fontSize: 10,
+        fontWeight: 600,
+        color: '#1B2E4B',
+    },
 });
 
 interface InvoicePDFProps {
     invoiceData: any;
-    themeConfig: {
-        theme: 'light' | 'dark';
-    };
+    themeConfig: any;
 }
 
 const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
-    const isLight = themeConfig.theme === 'light';
-
-    const SoftwareDetail = {
-        number1: '03212727660',
-        number2: '03122727660',
-        number3: '03054747660',
-        number4: '03125555336',
-        softwareName: 'Hamza',
-        shopName: 'AL NOOR CABLE MERCHANT',
-        shopAddress: 'Shop # 8, Subhan Allah Market, Near MashaAllah Godown, Dargah Road, Kabari Bazar, Shershah Karachi.',
-        shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
-    };
-
     const getTotalPaidAmount = () => {
-        return Number(invoiceData.cashAmount || 0) + Number(invoiceData.bankAmount || 0) + Number(invoiceData.checkAmount || 0);
+        return Number(invoiceData.cashAmount || 0) + Number(invoiceData.bankAmount || 0);
     };
 
     const getRemainingAmount = () => {
-        const totalPaid = getTotalPaidAmount();
-        return invoiceData.totalBillAmount - totalPaid;
+        return invoiceData.totalBillAmount - getTotalPaidAmount();
     };
 
     const getPaymentStatus = () => {
@@ -263,10 +252,22 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
         return 'Unpaid';
     };
 
+    const SoftwareDetail = {
+        number1: '03212727660',
+        number2: '03122727660',
+        number3: '03054747660',
+        number4: '03125555336',
+        softwareName: 'Hamza',
+        shopName: 'AL NOOR CABLE MERCHANT',
+        shopAddress: 'Shop # 8, Subhan Allah Market, Near MashaAllah Godown, Dargah Road, Kabari Bazar, Shershah Karachi.',
+        shopDescription: 'Power Cable, Electric Cable, Welding Cable, Internet Cable, Heat-Proof Cable & Water-Proof Cable',
+    };
+
+    const isLight = themeConfig.theme === 'light';
+
     return (
         <Document>
             <Page size="A4" style={[styles.page, isLight ? styles.lightPage : styles.darkPage]}>
-                {/* Header */}
                 <View style={styles.header}>
                     <Text style={[styles.title, isLight ? styles.titleLight : styles.titleDark]}>{SoftwareDetail.shopName}</Text>
                     <View style={styles.contactInfo}>
@@ -281,7 +282,7 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
                     </View>
                 </View>
 
-                <View style={[styles.divider, isLight ? styles.dividerLight : styles.dividerDark]} />
+                <View style={styles.divider} />
 
                 {/* Client and Invoice Information */}
                 <View style={styles.infoContainer}>
@@ -330,12 +331,8 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
                         <View
                             key={item.id}
                             style={[
-                                // Base style
                                 styles.tableRow,
-                                // Theme-specific style
                                 isLight ? styles.tableRowLight : styles.tableRowDark,
-                                // Striped style for odd rows
-                                
                             ]}
                         >
                             <Text style={[styles.column, styles.columnId, isLight ? styles.valueLight : styles.valueDark]}>{index + 1}</Text>
@@ -346,8 +343,7 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
                         </View>
                     ))}
                 </View>
-
-                {/* Summary Section */}
+                
                 <View style={styles.summaryContainer}>
                     {/* Payment Details */}
                     <View style={styles.paymentDetails}>

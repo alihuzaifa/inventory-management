@@ -9,7 +9,7 @@ import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import IconEye from '../components/Icon/IconEye';
 import { downloadExcel } from 'react-export-table-to-excel';
-const InvoicePdf = lazy(() => import('./Invoice'));
+const InvoiceView = lazy(() => import('./Invoice'));
 
 interface FormikCustomerDetails {
     customerName: string;
@@ -982,7 +982,7 @@ const Invoice = () => {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="p-5">{selectedInvoice && <InvoicePdf invoiceData={selectedInvoice} />}</div>
+                            <div className="p-5">{selectedInvoice && <InvoiceView invoiceData={selectedInvoice} />}</div>
                         </div>
                     </div>
                 </div>
