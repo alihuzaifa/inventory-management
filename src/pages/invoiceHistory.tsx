@@ -844,9 +844,9 @@ const InvoiceHistory = () => {
                                     validationSchema={paymentUpdateSchema}
                                     onSubmit={handlePaymentSubmit}
                                 >
-                                    {({ values, errors, touched, setFieldValue }) => (
+                                    {({ values, errors, touched, submitCount }) => (
                                         <Form className="space-y-5">
-                                            <div>
+                                            <div className={submitCount ? (errors.paymentTypes ? 'has-error' : 'has-success') : ''}>
                                                 <label className="mb-2 block">Payment Types</label>
                                                 <div className="flex gap-4">
                                                     <label className="inline-flex">
@@ -866,7 +866,7 @@ const InvoiceHistory = () => {
                                             </div>
 
                                             {values.paymentTypes?.includes('cash') && (
-                                                <div>
+                                                <div className={submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}>
                                                     <label>Cash Amount</label>
                                                     <Field name="cashAmount" type="number" className="form-input" />
                                                     {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
@@ -875,12 +875,12 @@ const InvoiceHistory = () => {
 
                                             {values.paymentTypes?.includes('bank') && (
                                                 <>
-                                                    <div>
+                                                   <div className={submitCount ? (errors.bankAmount ? 'has-error' : 'has-success') : ''}>
                                                         <label>Bank Amount</label>
                                                         <Field name="bankAmount" type="number" className="form-input" />
                                                         {touched.bankAmount && errors.bankAmount && <div className="text-danger mt-1">{errors.bankAmount}</div>}
                                                     </div>
-                                                    <div>
+                                                    <div className={submitCount ? (errors.bankName ? 'has-error' : 'has-success') : ''}>
                                                         <label>Bank Name</label>
                                                         <Field name="bankName" type="text" className="form-input" />
                                                         {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
@@ -890,12 +890,12 @@ const InvoiceHistory = () => {
 
                                             {values.paymentTypes?.includes('check') && (
                                                 <>
-                                                    <div>
+                                                     <div className={submitCount ? (errors.checkAmount ? 'has-error' : 'has-success') : ''}>
                                                         <label>Check Amount</label>
                                                         <Field name="checkAmount" type="number" className="form-input" />
                                                         {touched.checkAmount && errors.checkAmount && <div className="text-danger mt-1">{errors.checkAmount}</div>}
                                                     </div>
-                                                    <div>
+                                                    <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
                                                         <label>Check Number</label>
                                                         <Field name="checkNumber" type="text" className="form-input" />
                                                         {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}

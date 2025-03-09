@@ -463,10 +463,10 @@ const KhataSale = () => {
                         validationSchema={productSchema}
                         onSubmit={handleAddProduct}
                     >
-                        {({ errors, touched, values, setFieldValue }) => (
+                        {({ errors, touched, values, setFieldValue, submitCount }) => (
                             <Form>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
+                                    <div className={submitCount ? (errors.product ? 'has-error' : 'has-success') : ''}>
                                         <label htmlFor="product">Product *</label>
                                         <Field as="select" name="product" className="form-select">
                                             <option value="">Select Product</option>
@@ -481,7 +481,7 @@ const KhataSale = () => {
 
                                     {values.product && (
                                         <>
-                                            <div>
+                                            <div className={submitCount ? (errors.availableQuantity ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="availableQuantity">Available Qty *</label>
                                                 <Field as="select" name="availableQuantity" className="form-select">
                                                     <option value="">Select Quantity</option>
@@ -496,7 +496,7 @@ const KhataSale = () => {
                                                 {touched.availableQuantity && errors.availableQuantity && <div className="text-danger mt-1">{errors.availableQuantity}</div>}
                                             </div>
 
-                                            <div>
+                                            <div className={submitCount ? (errors.sellingQuantity ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="sellingQuantity">Selling Qty *</label>
                                                 <Field
                                                     name="sellingQuantity"
@@ -513,7 +513,7 @@ const KhataSale = () => {
                                                 {touched.sellingQuantity && errors.sellingQuantity && <div className="text-danger mt-1">{errors.sellingQuantity}</div>}
                                             </div>
 
-                                            <div>
+                                            <div className={submitCount ? (errors.price ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="price">Price *</label>
                                                 <Field
                                                     name="price"
@@ -530,7 +530,7 @@ const KhataSale = () => {
                                                 {touched.price && errors.price && <div className="text-danger mt-1">{errors.price}</div>}
                                             </div>
 
-                                            <div>
+                                            <div className={submitCount ? (errors.totalPrice ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="totalPrice">Total Price</label>
                                                 <Field name="totalPrice" type="number" className="form-input" disabled />
                                             </div>
@@ -613,22 +613,22 @@ const KhataSale = () => {
                             context={{ totalBillAmount: totalBillAmount }}
                             innerRef={customerFormRef}
                         >
-                            {({ errors, touched, values }) => (
+                            {({ errors, touched, values, submitCount }) => (
                                 <Form>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                        <div>
+                                        <div className={submitCount ? (errors.customerName ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="customerName">Customer Name *</label>
                                             <Field name="customerName" type="text" className="form-input" />
                                             {touched.customerName && errors.customerName && <div className="text-danger mt-1">{errors.customerName}</div>}
                                         </div>
 
-                                        <div>
+                                        <div className={submitCount ? (errors.phoneNumber ? 'has-error' : 'has-success') : ''}>
                                             <label htmlFor="phoneNumber">Phone Number *</label>
                                             <Field name="phoneNumber" type="text" className="form-input" />
                                             {touched.phoneNumber && errors.phoneNumber && <div className="text-danger mt-1">{errors.phoneNumber}</div>}
                                         </div>
 
-                                        <div>
+                                        <div className={submitCount ? (errors.paymentTypes ? 'has-error' : 'has-success') : ''}>
                                             <label>Payment Types *</label>
                                             <div className="mt-2">
                                                 <label className="inline-flex items-center mr-3">
@@ -650,7 +650,7 @@ const KhataSale = () => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
                                         {values.paymentTypes?.includes('cash') && (
-                                            <div>
+                                              <div className={submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="cashAmount">Cash Amount *</label>
                                                 <Field name="cashAmount" type="text" className="form-input" />
                                                 {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
@@ -659,12 +659,12 @@ const KhataSale = () => {
 
                                         {values.paymentTypes.includes('bank') && (
                                             <>
-                                                <div>
+                                                 <div className={submitCount ? (errors.bankName ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="bankName">Bank Name *</label>
                                                     <Field name="bankName" type="text" className="form-input" />
                                                     {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
                                                 </div>
-                                                <div>
+                                                <div className={submitCount ? (errors.bankAmount ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="bankAmount">Bank Amount *</label>
                                                     <Field name="bankAmount" type="text" className="form-input" />
                                                     {touched.bankAmount && errors.bankAmount && <div className="text-danger mt-1">{errors.bankAmount}</div>}
@@ -674,12 +674,12 @@ const KhataSale = () => {
 
                                         {values.paymentTypes.includes('check') && (
                                             <>
-                                                <div>
+                                                  <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="checkNumber">Check Number *</label>
                                                     <Field name="checkNumber" type="text" className="form-input" />
                                                     {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
                                                 </div>
-                                                <div>
+                                                <div className={submitCount ? (errors.checkAmount ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="checkAmount">Check Amount *</label>
                                                     <Field name="checkAmount" type="text" className="form-input" />
                                                     {touched.checkAmount && errors.checkAmount && <div className="text-danger mt-1">{errors.checkAmount}</div>}
