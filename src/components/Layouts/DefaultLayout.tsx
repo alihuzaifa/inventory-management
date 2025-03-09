@@ -7,7 +7,6 @@ import Footer from './Footer';
 import Header from './Header';
 import Setting from './Setting';
 import Sidebar from './Sidebar';
-import Portals from '../../components/Portals';
 
 const DefaultLayout = ({ children }: PropsWithChildren) => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -97,7 +96,6 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                         {/* BEGIN FOOTER */}
                         <Footer />
                         {/* END FOOTER */}
-                        <Portals />
                     </div>
                 </div>
             </div>

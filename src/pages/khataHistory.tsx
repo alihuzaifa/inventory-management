@@ -346,9 +346,37 @@ const KhataHistory = () => {
 
     useEffect(() => {
         let filteredData = khataHistoryData.filter((item) => {
-            const matchesSearch = search === '' || Object.values(item).some((val) => val?.toString().toLowerCase().includes(search.toLowerCase()));
-            const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
-            return matchesSearch && matchesStatus;
+            if (selectedStatus !== 'all' && item.status !== selectedStatus) {
+                return false;
+            }
+
+            if (search === '') {
+                return true;
+            }
+
+            const searchTerm = search.toLowerCase();
+
+            // Search in basic fields
+            const basicFieldsMatch = [
+                item.khataNumber,
+                item.customerName,
+                item.phoneNumber,
+                item.totalAmount.toString(),
+                item.paidAmount.toString(),
+                item.remainingAmount.toString(),
+                item.status,
+                new Date(item.khataDate).toLocaleDateString(),
+                new Date(item.dueDate).toLocaleDateString(),
+            ].some((value) => value.toLowerCase().includes(searchTerm));
+
+            if (basicFieldsMatch) return true;
+
+            // Search in payment details
+            const paymentDetailsMatch = item.paymentDetails.some((payment) =>
+                [payment.date, payment.amount.toString(), payment.paymentType, payment.bankName || '', payment.checkNumber || ''].some((value) => value.toLowerCase().includes(searchTerm))
+            );
+
+            return paymentDetailsMatch;
         });
 
         const sortedData = [...filteredData].sort((a, b) => {
@@ -360,7 +388,7 @@ const KhataHistory = () => {
         });
 
         setRecords(sortedData);
-    }, [search, selectedStatus, sortStatus]);
+    }, [search, selectedStatus, sortStatus, khataHistoryData]);
 
     return (
         <>
