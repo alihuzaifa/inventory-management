@@ -650,7 +650,7 @@ const KhataSale = () => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
                                         {values.paymentTypes?.includes('cash') && (
-                                              <div className={submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}>
+                                            <div className={submitCount ? (errors.cashAmount ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="cashAmount">Cash Amount *</label>
                                                 <Field name="cashAmount" type="text" className="form-input" />
                                                 {touched.cashAmount && errors.cashAmount && <div className="text-danger mt-1">{errors.cashAmount}</div>}
@@ -659,7 +659,7 @@ const KhataSale = () => {
 
                                         {values.paymentTypes.includes('bank') && (
                                             <>
-                                                 <div className={submitCount ? (errors.bankName ? 'has-error' : 'has-success') : ''}>
+                                                <div className={submitCount ? (errors.bankName ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="bankName">Bank Name *</label>
                                                     <Field name="bankName" type="text" className="form-input" />
                                                     {touched.bankName && errors.bankName && <div className="text-danger mt-1">{errors.bankName}</div>}
@@ -674,7 +674,7 @@ const KhataSale = () => {
 
                                         {values.paymentTypes.includes('check') && (
                                             <>
-                                                  <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
+                                                <div className={submitCount ? (errors.checkNumber ? 'has-error' : 'has-success') : ''}>
                                                     <label htmlFor="checkNumber">Check Number *</label>
                                                     <Field name="checkNumber" type="text" className="form-input" />
                                                     {touched.checkNumber && errors.checkNumber && <div className="text-danger mt-1">{errors.checkNumber}</div>}
@@ -788,37 +788,35 @@ const KhataSale = () => {
 
             {/* Invoice View Modal */}
             {isViewModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-[999]">
-                    <div className="flex items-start justify-center min-h-screen px-4">
-                        <div className="bg-white dark:bg-navy-700 mt-10 rounded-lg w-full max-w-5xl">
-                            <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <h5 className="text-lg font-semibold">Invoice Preview</h5>
-                                <button
-                                    type="button"
-                                    className="text-white-dark hover:text-dark"
-                                    onClick={() => {
-                                        setIsViewModalOpen(false);
-                                        setSelectedInvoice(null);
-                                    }}
+                <div className="absolute inset-0 z-[1050] flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white my-20 dark:bg-navy-700 rounded-lg overflow-y-auto max-h-[90vh]">
+                        <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                            <h5 className="text-lg font-semibold">Invoice Preview</h5>
+                            <button
+                                type="button"
+                                className="text-white-dark hover:text-dark"
+                                onClick={() => {
+                                    setIsViewModalOpen(false);
+                                    setSelectedInvoice(null);
+                                }}
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div className="p-5">{selectedInvoice && <InvoicePdf invoiceData={selectedInvoice} />}</div>
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
                         </div>
+                        <div className="p-5">{selectedInvoice && <InvoicePdf invoiceData={selectedInvoice} />}</div>
                     </div>
                 </div>
             )}

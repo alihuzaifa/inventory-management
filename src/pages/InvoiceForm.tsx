@@ -951,43 +951,41 @@ const Invoice = () => {
 
             {/* Invoice View Modal */}
             {isViewModalOpen && (
-                <div className="fixed inset-0 z-[999]">
-                    <div className="flex items-start justify-center min-h-screen px-4 overflow-y-auto">
-                        <div className="bg-white dark:bg-navy-700 mt-10 rounded-lg w-full max-w-5xl">
-                            <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <h5 className="text-lg font-semibold">Invoice Preview</h5>
-                                <button
-                                    type="button"
-                                    className="text-white-dark hover:text-dark"
-                                    onClick={() => {
-                                        setIsViewModalOpen(false);
-                                        setSelectedInvoice(null);
-                                    }}
+                <div className="absolute inset-0 z-[1050] flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white my-20 dark:bg-navy-700 rounded-lg overflow-y-auto max-h-[90vh]">
+                        <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                            <h5 className="text-lg font-semibold">Invoice Preview</h5>
+                            <button
+                                type="button"
+                                className="text-white-dark hover:text-dark"
+                                onClick={() => {
+                                    setIsViewModalOpen(false);
+                                    setSelectedInvoice(null);
+                                }}
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div className="p-5">{selectedInvoice && <InvoiceView invoiceData={selectedInvoice} />}</div>
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
                         </div>
+                        <div className="p-5">{selectedInvoice && <InvoiceView invoiceData={selectedInvoice} />}</div>
                     </div>
                 </div>
             )}
 
             {isPaymentModalOpen && selectedInvoiceForPayment && (
-                <div className="fixed top-16 inset-0 z-[999] shadow-2xl overflow-auto">
+                <div className="absolute top-20 inset-0 z-[999]">
                     <div className="flex items-start justify-center min-h-screen px-4">
                         <div className="panel rounded-lg w-full max-w-lg">
                             <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
