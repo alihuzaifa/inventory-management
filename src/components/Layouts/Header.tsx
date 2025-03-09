@@ -171,7 +171,7 @@ const Header = () => {
                                         </div>
                                     </li>
                                     <li className="border-t border-white-light dark:border-white-light/10">
-                                        <Link to="/auth/boxed-signin" className="text-danger !py-3">
+                                        <Link to="/login" className="text-danger !py-3">
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
                                             Sign Out
                                         </Link>

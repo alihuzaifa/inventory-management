@@ -8,7 +8,6 @@ import { useEffect } from 'react';
 import IconCaretsDown from '../Icon/IconCaretsDown';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconUser from '../Icon/IconUser';
-import IconUserPlus from '../Icon/IconUserPlus';
 import IconSettings from '../Icon/IconSettings';
 import IconDollarSign from '../Icon/IconDollarSign';
 
