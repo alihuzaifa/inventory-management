@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import IconEye from '../components/Icon/IconEye';
@@ -8,6 +8,10 @@ import IconPrinter from '../components/Icon/IconPrinter';
 import { capitalize } from 'lodash';
 import Ledger from './Ledger';
 import { downloadExcel } from 'react-export-table-to-excel';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import LedgerPDF from '../components/LedgerPDF';
+import IconDownload from '../components/Icon/IconDownload';
+import { IRootState } from '../store';
 
 interface Product {
     id: number;
@@ -344,6 +348,8 @@ const KhataHistory = () => {
         }
     };
 
+    const theme = useSelector((state: IRootState) => state.themeConfig);
+
     useEffect(() => {
         let filteredData = khataHistoryData.filter((item) => {
             if (selectedStatus !== 'all' && item.status !== selectedStatus) {
@@ -389,7 +395,6 @@ const KhataHistory = () => {
 
         setRecords(sortedData);
     }, [search, selectedStatus, sortStatus, khataHistoryData]);
-
     return (
         <>
             <div className="panel mt-6">
@@ -487,13 +492,25 @@ const KhataHistory = () => {
                             {
                                 accessor: 'actions',
                                 title: 'Actions',
-                                render: (row) => (
-                                    <div className="flex gap-2">
-                                        <button type="button" className="btn btn-sm btn-outline-info" onClick={() => handleViewKhata(row.id)}>
-                                            <IconEye className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ),
+                                render: (row) => {
+                                    const ledgerData = dummyLedgerData.find((l) => l.id === row.id);
+                                    return (
+                                        <div className="flex gap-2">
+                                            <button type="button" className="btn btn-sm btn-outline-info" onClick={() => handleViewKhata(row.id)}>
+                                                <IconEye className="w-4 h-4" />
+                                            </button>
+                                            {ledgerData && (
+                                                <PDFDownloadLink document={<LedgerPDF ledgerData={ledgerData} themeConfig={theme} />} fileName="invoice.pdf">
+                                                    {({ loading }) => (
+                                                        <button type="button" className="btn btn-sm btn-primary">
+                                                            {loading ? 'Loading...' : <IconDownload />}
+                                                        </button>
+                                                    )}
+                                                </PDFDownloadLink>
+                                            )}
+                                        </div>
+                                    );
+                                },
                             },
                         ]}
                         totalRecords={records.length}

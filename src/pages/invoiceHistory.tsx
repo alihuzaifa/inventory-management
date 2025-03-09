@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import IconFile from '../components/Icon/IconFile';
@@ -14,7 +14,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from '../components/InvoicePdf';
 import IconDownload from '../components/Icon/IconDownload';
 import IconPlus from '../components/Icon/IconPlus';
-import themeConfig from '../theme.config';
+import { IRootState } from '../store';
 const InvoiceView = lazy(() => import('./Invoice'));
 
 // Payment Types
@@ -629,7 +629,7 @@ const InvoiceHistory = () => {
         setSelectedInvoiceForPayment(null);
         Swal.fire('Success', 'Payment updated successfully', 'success');
     };
-
+    const theme = useSelector((state: IRootState) => state.themeConfig);
     return (
         <>
             <div className="panel mt-6">
@@ -736,7 +736,7 @@ const InvoiceHistory = () => {
                                         <button className="btn btn-sm btn-primary" onClick={() => handleViewInvoice(row)}>
                                             <IconEye className="w-4 h-4" />
                                         </button>
-                                        <PDFDownloadLink document={<InvoicePDF invoiceData={row} themeConfig={themeConfig} />} fileName="invoice.pdf">
+                                        <PDFDownloadLink document={<InvoicePDF invoiceData={row} themeConfig={theme} />} fileName="invoice.pdf">
                                             {({ loading }) => (
                                                 <button type="button" className="btn btn-sm btn-primary">
                                                     {loading ? 'Loading...' : <IconDownload />}

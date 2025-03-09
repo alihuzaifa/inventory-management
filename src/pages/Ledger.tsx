@@ -155,9 +155,9 @@ const Ledger = ({ ledgerData }: LedgerProps) => {
         <div className="panel p-6">
             {/* Shop Header */}
             <div className="text-2xl font-bold uppercase text-center">{SoftwareDetail.shopName}</div>
-            <div className="mt-2 text-end">
-                <span className="font-semibold">{SoftwareDetail.softwareName}: </span>
-                {SoftwareDetail.number1} | {SoftwareDetail.number2}
+            <div className="text-white-dark mt-2 text-end">
+                <span className="font-semibold">{SoftwareDetail.softwareName}: </span> {SoftwareDetail.number1} | {SoftwareDetail.number2}
+                <br /> <span className="font-semibold">Azeem Badshah:</span> {SoftwareDetail.number3} | {SoftwareDetail.number4}
             </div>
             <hr className="border-white-light dark:border-[#1b2e4b] my-6" />
 
