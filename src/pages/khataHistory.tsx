@@ -527,10 +527,10 @@ const KhataHistory = () => {
                 </div>
             </div>
             {isLedgerViewOpen && selectedLedgerData && (
-                <div className="fixed inset-0 top-72 flex items-center justify-center z-[999]">
-                    <div className="p-6 panel rounded-lg shadow-xl w-11/12">
-                        <div className="flex justify-between items-center p-4 border-b">
-                            <h2 className="text-xl font-bold">Khata Details</h2>
+                <div className="absolute top-0 z-[1050] flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white my-20 dark:bg-navy-700 rounded-lg overflow-y-auto max-h-[90vh]">
+                        <div className="flex items-center justify-between p-5 border-b border-[#EBEDF2] dark:border-[#1B2E4B]">
+                            <h5 className="text-lg font-semibold">Khata Details</h5>
                             <button
                                 type="button"
                                 className="btn btn-sm btn-outline-danger"
@@ -542,7 +542,10 @@ const KhataHistory = () => {
                                 Close
                             </button>
                         </div>
-                        <Ledger ledgerData={selectedLedgerData} />
+                        <div className="p-5">
+                            {' '}
+                            <Ledger ledgerData={selectedLedgerData} />
+                        </div>
                     </div>
                 </div>
             )}
