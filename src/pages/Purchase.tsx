@@ -25,12 +25,6 @@ const Purchase = () => {
     const formikRef = useRef<any>(null);
     const [rowData, setRowData] = useState<any[]>([]);
 
-    // Sample supplier data for dropdown
-    const suppliers = [
-        { id: 1, name: 'Ali Trading Company' },
-        { id: 2, name: 'Karachi Electronics' },
-    ];
-
     const submitForm = (values: any) => {
         const newPurchase = {
             id: rowData.length + 1,
@@ -41,7 +35,7 @@ const Purchase = () => {
             totalPrice: Number(values.totalPrice),
             purchaseDate: new Date().toISOString().split('T')[0],
         };
-
+        console.log('newPurchase', newPurchase);
         setRowData([...rowData, newPurchase]);
 
         const toast = Swal.mixin({
