@@ -330,7 +330,7 @@ const Invoice = () => {
         }
     };
 
-    const handleSaveInvoice = () => {
+    const handleSaveInvoice = async () => {
         if (currentProducts.length === 0) {
             Swal.fire({
                 icon: 'error',
@@ -349,8 +349,7 @@ const Invoice = () => {
             return;
         }
 
-        const newInvoice: InvoiceRecord = {
-            id: initialRecords.length + 1,
+        const newInvoice: any = {
             customerName: customerData.customerName,
             phoneNumber: customerData.phoneNumber,
             paymentTypes: customerData.paymentTypes,
@@ -359,15 +358,23 @@ const Invoice = () => {
             bankName: customerData.bankName,
             checkAmount: Number(customerData.checkAmount || 0),
             checkNumber: customerData.checkNumber,
-            products: [...currentProducts],
+            products: currentProducts?.map((data: any) => {
+                return {
+                    product: data?.availableQuantityId,
+                    sellingQuantity: data?.sellingQuantity,
+                    price: data?.price,
+                    total: data?.totalPrice,
+                };
+            }),
             saleDate: new Date().toISOString(),
             totalBillAmount,
             billType: (customerData.billType as 'perfect' | 'fake') || 'perfect',
         };
 
-        console.log('newInvoice', newInvoice);
+        const createInvoice = await InventoryManagement.CreateInvoice(newInvoice)
+        console.log("🚀createInvoice:", createInvoice)
 
-        setInitialRecords([...initialRecords, newInvoice]);
+        // setInitialRecords([...initialRecords, newInvoice])
         setCurrentProducts([]);
         setCustomerData(null);
         setTotalBillAmount(0);

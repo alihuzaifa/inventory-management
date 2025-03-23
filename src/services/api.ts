@@ -272,6 +272,69 @@ const GetStockHistory = async (product: string, startDate?: string, endDate?: st
     }
 };
 
+const CreateInvoice = async (data: any) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices`,
+            method: URL_METHODS.POST,
+            data,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const GetAllInvoices = async () => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices`,
+            method: URL_METHODS.GET,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const GetInvoiceById = async (id: string) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/id/${id}`,
+            method: URL_METHODS.GET,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const GetInvoicesByDateRange = async (startDate: string, endDate: string) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/date-range`,
+            method: URL_METHODS.GET,
+            params: { startDate, endDate },
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const GetInvoicesByCustomer = async (params: { customerName?: string; phoneNumber?: string }) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/customer`,
+            method: URL_METHODS.GET,
+            params,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 const InventoryManagement = {
     Login,
     CreateUser,
@@ -294,5 +357,10 @@ const InventoryManagement = {
     GetStockByProduct,
     GetStockHistory,
     GetAllStocks,
+    CreateInvoice,
+    GetAllInvoices,
+    GetInvoiceById,
+    GetInvoicesByDateRange,
+    GetInvoicesByCustomer,
 }
 export default InventoryManagement;
