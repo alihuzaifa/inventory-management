@@ -8,12 +8,18 @@ import IconEye from '../components/Icon/IconEye';
 import IconEdit from '../components/Icon/IconEdit';
 import IconTrash from '../components/Icon/IconTrash';
 import { downloadExcel } from 'react-export-table-to-excel';
+import InventoryManagement from '../services/api';
+import Swal from 'sweetalert2';
 
 interface Expense {
-    id: number;
+    _id: string;
+    shopId: string;
     expenseName: string;
     amount: number;
     date: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
 }
 
 interface GroupedExpense {
@@ -79,15 +85,41 @@ const searchAndFilterHelpers = {
 
 const Expense = () => {
     const dispatch = useDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
     useEffect(() => {
         dispatch(setPageTitle('Expense (Kharcha)'));
+    }, []);
+
+    const getAllExpenses = async () => {
+        setIsLoading(true);
+        try {
+            const response = await InventoryManagement.GetAllExpenses();
+            if (response?.data) {
+                setRecords(response.data);
+            }
+        } catch (error: any) {
+            console.error('Error fetching expenses:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to fetch expenses',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        getAllExpenses();
     }, []);
 
     // Form states
     const [expenseName, setExpenseName] = useState('');
     const [amount, setAmount] = useState<number | ''>('');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedExpense, setSelectedExpense] = useState<number | null>(null);
+    const [selectedExpense, setSelectedExpense] = useState<string | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [expenseDetails, setExpenseDetails] = useState<Expense[]>([]);
 
@@ -120,52 +152,100 @@ const Expense = () => {
 
         return Object.values(grouped).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
+
     // Handle form submission
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (expenseName && amount) {
-            if (editMode && selectedExpense) {
-                // Update existing expense
-                const updatedRecords = records.map((record) =>
-                    record.id === selectedExpense
-                        ? {
-                              ...record,
-                              expenseName,
-                              amount: Number(amount),
-                          }
-                        : record
-                );
-                setRecords(updatedRecords);
+        try {
+            if (expenseName && amount) {
+                if (editMode && selectedExpense) {
+                    // Update existing expense
+                    const updateData = {
+                        expenseName,
+                        amount: Number(amount),
+                        date,
+                    };
+                    const response = await InventoryManagement.UpdateExpense(selectedExpense, updateData);
+                    if (response?.data) {
+                        await getAllExpenses();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Expense updated successfully',
+                        });
+                    }
+                } else {
+                    // Add new expense
+                    const newExpense = {
+                        expenseName,
+                        amount: Number(amount),
+                        date,
+                    };
+                    const response = await InventoryManagement.CreateExpense(newExpense);
+                    if (response?.data) {
+                        await getAllExpenses();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Expense added successfully',
+                        });
+                    }
+                }
+                // Reset form
+                setExpenseName('');
+                setAmount('');
+                setDate(new Date().toISOString().split('T')[0]);
                 setEditMode(false);
                 setSelectedExpense(null);
                 setIsModalOpen(false);
-            } else {
-                // Add new expense
-                const newExpense: Expense = {
-                    id: records.length + 1,
-                    expenseName,
-                    amount: Number(amount),
-                    date: new Date().toISOString().split('T')[0],
-                };
-                setRecords([...records, newExpense]);
             }
-            // Reset form
-            setExpenseName('');
-            setAmount('');
+        } catch (error: any) {
+            console.error('Error submitting expense:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to process expense',
+            });
         }
     };
 
     const handleEdit = (expense: Expense) => {
+        const date = new Date(expense.createdAt);
+        const formatttedDate = date.toISOString().split('T')[0];
         setExpenseName(expense.expenseName);
         setAmount(expense.amount);
+        setDate(formatttedDate);
         setEditMode(true);
-        setSelectedExpense(expense.id);
+        setSelectedExpense(expense._id);
         setIsModalOpen(false);
     };
 
-    const handleDelete = (id: number) => {
-        setRecords(records.filter((record) => record.id !== id));
-        setIsModalOpen(false);
+    const handleDelete = async (id: string) => {
+        try {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!',
+            });
+
+            if (result.isConfirmed) {
+                const deleteItem = await InventoryManagement.DeleteExpense(id);
+                if (deleteItem.success) {
+                    await getAllExpenses();
+                    Swal.fire('Deleted!', 'Expense has been deleted.', 'success');
+                    setIsModalOpen(false);
+                }
+            }
+        } catch (error: any) {
+            console.error('Error deleting expense:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to delete expense',
+            });
+        }
     };
 
     // Format date helper
@@ -179,6 +259,7 @@ const Expense = () => {
         return '';
     };
 
+    // Export functions
     const handleExportCSV = () => {
         const csvContent = [['Date', 'Total Expense'].join(','), ...groupedRecords.map((item) => [formatDate(item.date), `Rs. ${item.totalExpense.toLocaleString()}`].join(','))].join('\n');
 
@@ -259,13 +340,14 @@ const Expense = () => {
         const grouped = groupRecordsByDate(filteredData);
         setGroupedRecords(grouped);
     }, [records, search, sortStatus]);
+
     return (
         <div className="space-y-6">
             {/* Add Expense Form */}
             <div className="panel">
                 <h2 className="text-xl font-bold mb-4">{editMode ? 'Edit Expense' : 'Add New Expense'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label htmlFor="expenseName" className="block mb-2">
                                 Expense Name
@@ -278,8 +360,29 @@ const Expense = () => {
                             </label>
                             <input id="amount" type="number" className="form-input" value={amount} onChange={(e) => setAmount(Number(e.target.value))} placeholder="Enter amount" required />
                         </div>
+                        <div>
+                            <label htmlFor="date" className="block mb-2">
+                                Date
+                            </label>
+                            <input id="date" type="date" className="form-input" value={date} onChange={(e) => setDate(e.target.value)} required />
+                        </div>
                     </div>
                     <div className="flex justify-end">
+                        {editMode && (
+                            <button
+                                type="button"
+                                className="btn btn-outline-danger ltr:mr-2 rtl:ml-2"
+                                onClick={() => {
+                                    setEditMode(false);
+                                    setSelectedExpense(null);
+                                    setExpenseName('');
+                                    setAmount('');
+                                    setDate(new Date().toISOString().split('T')[0]);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        )}
                         <button type="submit" className="btn btn-primary">
                             {editMode ? 'Update Expense' : 'Add Expense'}
                         </button>
@@ -382,7 +485,7 @@ const Expense = () => {
                                 className="whitespace-nowrap table-hover"
                                 records={expenseDetails}
                                 columns={[
-                                    { accessor: 'id', title: 'Id' },
+                                    { accessor: '_id', title: 'Id' },
                                     { accessor: 'expenseName', title: 'Expense Name' },
                                     {
                                         accessor: 'amount',
@@ -397,7 +500,7 @@ const Expense = () => {
                                                 <button onClick={() => handleEdit(item)} className="btn btn-sm btn-outline-primary">
                                                     <IconEdit className="w-5 h-5" />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.id)} className="btn btn-sm btn-outline-danger">
+                                                <button onClick={() => handleDelete(item._id)} className="btn btn-sm btn-outline-danger">
                                                     <IconTrash className="w-5 h-5" />
                                                 </button>
                                             </div>

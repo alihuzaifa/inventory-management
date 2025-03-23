@@ -32,6 +32,7 @@ const defaultState = {
         { code: 'tr', name: 'Turkish' },
     ],
     semidark: false,
+    token: null,
 };
 
 const initialState = {
@@ -45,6 +46,7 @@ const initialState = {
     isDarkMode: false,
     sidebar: localStorage.getItem('sidebar') || defaultState.sidebar,
     semidark: localStorage.getItem('semidark') || themeConfig.semidark,
+    token: localStorage.getItem('token') || defaultState.token,
     languageList: [
         { code: 'zh', name: 'Chinese' },
         { code: 'da', name: 'Danish' },
@@ -136,9 +138,20 @@ const themeConfigSlice = createSlice({
         setPageTitle(state, { payload }) {
             document.title = `${payload} | Inventory Management System`;
         },
+        // ✅ Set token in state and localStorage
+        setToken(state, { payload }) {
+            state.token = payload;
+            localStorage.setItem('token', payload);
+        },
+
+        // ✅ Remove token from state and localStorage
+        removeToken(state) {
+            state.token = null;
+            localStorage.removeItem('token');
+        },
     },
 });
 
-export const { toggleTheme, toggleMenu, toggleLayout, toggleRTL, toggleAnimation, toggleNavbar, toggleSemidark, toggleLocale, toggleSidebar, setPageTitle } = themeConfigSlice.actions;
+export const { toggleTheme, toggleMenu, toggleLayout, toggleRTL, toggleAnimation, toggleNavbar, toggleSemidark, toggleLocale, toggleSidebar, setPageTitle, setToken, removeToken } = themeConfigSlice.actions;
 
 export default themeConfigSlice.reducer;

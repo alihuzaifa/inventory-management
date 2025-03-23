@@ -4,7 +4,6 @@ const Expense = lazy(() => import('../pages/expense'));
 const KhataHistory = lazy(() => import('../pages/khataHistory'));
 const KhataSale = lazy(() => import('../pages/khataSale'));
 const InvoiceHistory = lazy(() => import('../pages/invoiceHistory'));
-// const Invoice = lazy(() => import('../pages/Invoice'));
 const User = lazy(() => import('../pages/user'));
 const InvoiceForm = lazy(() => import('../pages/InvoiceForm'));
 const Purchase = lazy(() => import('../pages/Purchase'));
