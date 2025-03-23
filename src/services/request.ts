@@ -27,7 +27,6 @@ const request = async function (options: any): Promise<any> {
     };
     // Get token from Redux store
     const token = store.getState().themeConfig.token;
-    console.log('token', token);
 
     const client = axios.create({
         headers: {

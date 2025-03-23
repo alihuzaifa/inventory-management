@@ -9,6 +9,7 @@ import IconFile from '../components/Icon/IconFile';
 import IconPrinter from '../components/Icon/IconPrinter';
 import IconEye from '../components/Icon/IconEye';
 import { downloadExcel } from 'react-export-table-to-excel';
+import InventoryManagement from '../services/api';
 const InvoiceView = lazy(() => import('./Invoice'));
 
 interface FormikCustomerDetails {
@@ -29,6 +30,7 @@ interface FormikProductDetails {
     sellingQuantity: string | number;
     price: string | number;
     totalPrice: string | number;
+    availableQuantityId: string;
 }
 
 interface ProductItem {
@@ -38,6 +40,7 @@ interface ProductItem {
     sellingQuantity: number;
     price: number;
     totalPrice: number;
+    availableQuantityId: string;
 }
 
 interface CustomerDetails {
@@ -89,13 +92,6 @@ interface PaymentFormValues {
     checkAmount: string;
     checkNumber: string;
 }
-
-const products = [
-    { id: 1, name: 'LED TV', quantities: [500, 100, 1000] },
-    { id: 2, name: 'Laptop', quantities: [50, 100, 200] },
-    { id: 3, name: 'Mobile Phone', quantities: [300, 400, 500] },
-    { id: 4, name: 'Refrigerator', quantities: [50, 75, 100] },
-];
 
 const customerDetailsSchema = Yup.object().shape({
     customerName: Yup.string().required('Customer name is required'),
@@ -182,7 +178,7 @@ const Invoice = () => {
     const [customerData, setCustomerData] = useState<CustomerDetails | null>(null);
     const [totalBillAmount, setTotalBillAmount] = useState(0);
     const customerFormRef = useRef<FormikProps<FormikCustomerDetails>>(null);
-
+    const [products, setProducts] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
@@ -207,6 +203,26 @@ const Invoice = () => {
     useEffect(() => {
         dispatch(setPageTitle('Sale Form'));
     }, [dispatch]);
+
+    const fetchProducts = async () => {
+        try {
+            const response = await InventoryManagement.GetAllStocks();
+            const transformedData = response.map((product: any) => ({
+                id: product._id, // Using _id as the unique identifier
+                name: product.product,
+                quantities: product.stocks.map((stock: any) => {
+                    return { quantity: stock.quantity, _id: stock?._id };
+                }),
+            }));
+            setProducts(transformedData);
+        } catch (error: any) {
+            console.error('Error fetching stocks:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
 
     useEffect(() => {
         const filteredData = initialRecords.filter((item) => {
@@ -248,6 +264,7 @@ const Invoice = () => {
     };
 
     const handleAddProduct = (values: FormikProductDetails, { resetForm }: any) => {
+        // Create new product object
         const newProduct: ProductItem = {
             id: currentProducts.length + 1,
             product: values.product as string,
@@ -255,7 +272,10 @@ const Invoice = () => {
             sellingQuantity: Number(values.sellingQuantity),
             price: Number(values.price),
             totalPrice: Number(values.totalPrice),
+            availableQuantityId: values.availableQuantityId,
         };
+
+        // Update current products list
         const updatedProducts = [...currentProducts, newProduct];
         setCurrentProducts(updatedProducts);
 
@@ -263,7 +283,28 @@ const Invoice = () => {
         const newTotalAmount = updatedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
         setTotalBillAmount(newTotalAmount);
 
-        // Force Formik to revalidate with new total bill amount
+        // Reduce selected quantity from the products array
+        setProducts((prevProducts) =>
+            prevProducts.map((product) => {
+                if (product.name === values.product) {
+                    return {
+                        ...product,
+                        quantities: product.quantities
+                            .map((qty: any) => {
+                                if (qty._id === values.availableQuantityId) {
+                                    const newQuantity = qty.quantity - Number(values.sellingQuantity);
+                                    return newQuantity > 0 ? { ...qty, quantity: newQuantity } : null;
+                                }
+                                return qty;
+                            })
+                            .filter(Boolean), // Remove null values (quantities that reached 0)
+                    };
+                }
+                return product;
+            })
+        );
+
+        // Force Formik to revalidate
         if (customerFormRef.current) {
             customerFormRef.current.setFieldValue('cashAmount', customerFormRef.current.values.cashAmount, true);
             customerFormRef.current.setFieldValue('bankAmount', customerFormRef.current.values.bankAmount, true);
@@ -323,6 +364,8 @@ const Invoice = () => {
             totalBillAmount,
             billType: (customerData.billType as 'perfect' | 'fake') || 'perfect',
         };
+
+        console.log('newInvoice', newInvoice);
 
         setInitialRecords([...initialRecords, newInvoice]);
         setCurrentProducts([]);
@@ -572,6 +615,7 @@ const Invoice = () => {
                             sellingQuantity: '',
                             price: '',
                             totalPrice: '',
+                            availableQuantityId: '',
                         }}
                         validationSchema={productSchema}
                         onSubmit={handleAddProduct}
@@ -596,13 +640,32 @@ const Invoice = () => {
                                         <>
                                             <div className={submitCount ? (errors.availableQuantity ? 'has-error' : 'has-success') : ''}>
                                                 <label htmlFor="availableQuantity">Available Qty *</label>
-                                                <Field as="select" name="availableQuantity" className="form-select">
+                                                <Field
+                                                    as="select"
+                                                    name="availableQuantity"
+                                                    className="form-select"
+                                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                        const selectedQuantity = e.target.value;
+                                                        setFieldValue('availableQuantity', selectedQuantity);
+
+                                                        const selectedProduct = products.find((p) => p.name === values.product);
+                                                        if (selectedProduct) {
+                                                            const selectedQtyObj = selectedProduct.quantities.find((qty: any) => qty.quantity.toString() === selectedQuantity);
+                                                            if (selectedQtyObj) {
+                                                                console.log('Setting availableQuantityId:', selectedQtyObj._id); // Debugging log
+                                                                setFieldValue('availableQuantityId', selectedQtyObj._id);
+                                                            } else {
+                                                                setFieldValue('availableQuantityId', '');
+                                                            }
+                                                        }
+                                                    }}
+                                                >
                                                     <option value="">Select Quantity</option>
                                                     {products
                                                         .find((p) => p.name === values.product)
-                                                        ?.quantities.map((qty, idx) => (
-                                                            <option key={idx} value={qty}>
-                                                                {qty}
+                                                        ?.quantities.map((qty: any, idx: any) => (
+                                                            <option key={idx} value={qty.quantity}>
+                                                                {qty.quantity}
                                                             </option>
                                                         ))}
                                                 </Field>
