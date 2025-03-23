@@ -1,4 +1,4 @@
-import { DataTable, DataTableSortStatus } from 'mantine-datatable';
+import { DataTable } from 'mantine-datatable';
 import { useEffect, useState } from 'react';
 import sortBy from 'lodash/sortBy';
 import { downloadExcel } from 'react-export-table-to-excel';
@@ -9,123 +9,98 @@ import IconPrinter from '../components/Icon/IconPrinter';
 import IconEye from '../components/Icon/IconEye';
 import { capitalize } from 'lodash';
 import StockModal from '../components/StockModal';
+import InventoryManagement from '../services/api';
+import Swal from 'sweetalert2';
 
-// Sample data structure for stocks
-const rowData = [
-    {
-        id: 1,
-        product: 'LED TV',
-        totalQuantity: 550,
-        totalPrice: 24750000,
-        lastPurchaseDate: '2024-01-15',
-        stocks: [
-            { supplier: 'Noman', quantity: 100, price: 45000, date: '2024-01-10' },
-            { supplier: 'Ahmed', quantity: 450, price: 45000, date: '2024-01-15' },
-        ],
-    },
-    {
-        id: 2,
-        product: 'Laptop',
-        totalQuantity: 300,
-        totalPrice: 25500000,
-        lastPurchaseDate: '2024-01-16',
-        stocks: [
-            { supplier: 'Ali Huzaifa', quantity: 200, price: 85000, date: '2024-01-12' },
-            { supplier: 'Ali Hamza', quantity: 100, price: 85000, date: '2024-01-16' },
-        ],
-    },
-];
+// Constants
+const PAGE_SIZES = [10, 20, 30, 50, 100];
 
-const col = ['id', 'supplier', 'product', 'quantity', 'price', 'totalPrice', 'lastPurchaseDate'];
-const header = ['ID', 'Supplier', 'Product', 'Quantity', 'Price', 'Total Price', 'Last Purchase Date'];
+// Interfaces
+interface StockEntry {
+    supplier: string;
+    quantity: number;
+    price: number;
+    date: string;
+}
+
+interface Stock {
+    _id: string;
+    shopId: string;
+    product: string;
+    totalQuantity: number;
+    totalPrice: number;
+    lastPurchaseDate: string;
+    stocks: StockEntry[];
+}
 
 const Stock = () => {
     const dispatch = useDispatch();
+    const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+    const [initialRecords, setInitialRecords] = useState<Stock[]>([]);
+    const [recordsData, setRecordsData] = useState<Stock[]>([]);
+    const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [sortStatus, setSortStatus] = useState({ columnAccessor: 'product', direction: 'asc' });
+
     useEffect(() => {
         dispatch(setPageTitle('Stock Management'));
+        fetchStocks();
     }, []);
 
-    // States for filtering
-    const [selectedSupplier, setSelectedSupplier] = useState('all');
-    const [selectedStock, setSelectedStock] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Table configuration
-    const [page, setPage] = useState(1);
-    const PAGE_SIZES = [10, 20, 30, 50, 100];
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState(sortBy(rowData, 'id'));
-    const [recordsData, setRecordsData] = useState(initialRecords);
-    const [search, setSearch] = useState('');
-    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
-
-    useEffect(() => {
-        const filteredData = rowData.filter((item) => {
-            const searchTerm = search.toLowerCase();
-            const formattedPurchaseDate = formatDate(item.lastPurchaseDate).toLowerCase();
-
-            // Format prices for searching
-            const formattedTotalPrice = `Rs. ${item.totalPrice.toLocaleString()}`.toLowerCase();
-
-            // Search in main item
-            const mainItemMatches =
-                searchTerm === '' ||
-                item.id.toString().includes(searchTerm) ||
-                item.product.toLowerCase().includes(searchTerm) ||
-                item.totalQuantity.toString().includes(searchTerm) ||
-                formattedTotalPrice.includes(searchTerm) ||
-                formattedPurchaseDate.includes(searchTerm);
-
-            // Search in stocks array
-            const stockMatches = item.stocks.some((stock) => {
-                const formattedStockPrice = `Rs. ${stock.price.toLocaleString()}`.toLowerCase();
-                const formattedStockTotalPrice = `Rs. ${(stock.price * stock.quantity).toLocaleString()}`.toLowerCase();
-                const formattedStockDate = formatDate(stock.date).toLowerCase();
-
-                return (
-                    stock.supplier.toLowerCase().includes(searchTerm) ||
-                    stock.quantity.toString().includes(searchTerm) ||
-                    formattedStockPrice.includes(searchTerm) ||
-                    formattedStockTotalPrice.includes(searchTerm) ||
-                    formattedStockDate.includes(searchTerm)
-                );
+    // Fetch all stocks
+    const fetchStocks = async () => {
+        try {
+            setLoading(true);
+            const response = await InventoryManagement.GetAllStocks();
+            if (response) {
+                setInitialRecords(response);
+            }
+        } catch (error: any) {
+            console.error('Error fetching stocks:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to fetch stocks',
             });
-
-            const matchesSupplier = selectedSupplier === 'all' || item.stocks.some((stock) => stock.supplier === selectedSupplier);
-
-            return (mainItemMatches || stockMatches) && matchesSupplier;
-        });
-
-        const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
-        const sorted = sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData;
-
-        setInitialRecords(sorted);
-
-        // Update recordsData with paginated results
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize;
-        setRecordsData(sorted.slice(from, to));
-    }, [search, selectedSupplier, sortStatus, page, pageSize]);
-
-    // View stock details handler
-    const handleViewDetails = (stock: any) => {
-        setSelectedStock(stock);
-        setIsModalOpen(true);
-    };
-
-    const formatDate = (date: string) => {
-        if (date) {
-            const dt = new Date(date);
-            const month = dt.getMonth() + 1 < 10 ? '0' + (dt.getMonth() + 1) : dt.getMonth() + 1;
-            const day = dt.getDate() < 10 ? '0' + dt.getDate() : dt.getDate();
-            return day + '/' + month + '/' + dt.getFullYear();
+        } finally {
+            setLoading(false);
         }
-        return '';
     };
 
+    // Format date helper
+    const formatDate = (date: string) => {
+        if (!date) return '';
+        const dt = new Date(date);
+        const month = dt.getMonth() + 1 < 10 ? '0' + (dt.getMonth() + 1) : dt.getMonth() + 1;
+        const day = dt.getDate() < 10 ? '0' + dt.getDate() : dt.getDate();
+        return day + '/' + month + '/' + dt.getFullYear();
+    };
+
+    // Handle view stock details
+    const handleViewDetails = async (stock: Stock) => {
+        try {
+            const response = await InventoryManagement.GetStockHistory(stock.product);
+            if (response) {
+                setSelectedStock({ ...stock, stocks: response.history });
+                setIsModalOpen(true);
+            }
+        } catch (error: any) {
+            console.error('Error fetching stock history:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to fetch stock history',
+            });
+        }
+    };
+
+    // Export table as CSV
     const exportTable = (type: string) => {
-        let columns = ['id', 'product', 'totalQuantity', 'totalPrice', 'lastPurchaseDate']; // Updated columns
-        let records = rowData;
+        let columns = ['_id', 'product', 'totalQuantity', 'totalPrice', 'lastPurchaseDate'];
+        let records = initialRecords;
         let filename = 'Stock Report';
 
         if (type === 'csv') {
@@ -134,12 +109,12 @@ const Stock = () => {
             let result = columns.map(capitalize).join(coldelimiter);
             result += linedelimiter;
 
-            records.forEach((item: any) => {
+            records.forEach((item) => {
                 columns.forEach((d, index) => {
                     if (index > 0) result += coldelimiter;
-                    let val = item[d] ? item[d] : '';
+                    let val = item[d as keyof Stock] || '';
                     if (d === 'totalPrice') val = `Rs. ${val.toLocaleString()}`;
-                    if (d === 'lastPurchaseDate') val = formatDate(val);
+                    if (d === 'lastPurchaseDate') val = formatDate(val as string);
                     result += val;
                 });
                 result += linedelimiter;
@@ -151,6 +126,7 @@ const Stock = () => {
             link.setAttribute('download', filename + '.csv');
             link.click();
         } else if (type === 'print') {
+            // Print functionality
             let rowhtml = `<p>${filename}</p>`;
             rowhtml += `<table style="width: 100%;" cellpadding="0" cellspacing="0">
                 <thead><tr style="color: #515365; background: #eff5ff; print-color-adjust: exact;">`;
@@ -161,12 +137,12 @@ const Stock = () => {
 
             rowhtml += `</tr></thead><tbody>`;
 
-            records.forEach((item: any) => {
+            records.forEach((item) => {
                 rowhtml += '<tr>';
-                columns.forEach((d: any) => {
-                    let val = item[d] ? item[d] : '';
-                    if (d === 'totalPrice') val = `Rs. ${val.toLocaleString()}`;
-                    if (d === 'lastPurchaseDate') val = formatDate(val);
+                columns.forEach((d) => {
+                    let val = item[d as keyof Stock] || '';
+                    if (d === 'totalPrice') val = `Rs. ${(val as number).toLocaleString()}`;
+                    if (d === 'lastPurchaseDate') val = formatDate(val as string);
                     rowhtml += `<td>${val}</td>`;
                 });
                 rowhtml += '</tr>';
@@ -182,19 +158,22 @@ const Stock = () => {
                     tr:nth-child(odd) { background:#f7f7f7; }
                 </style>`;
 
-            const winPrint: any = window.open('', '', 'width=1000,height=600');
-            winPrint.document.write(`<title>Print</title>${rowhtml}`);
-            winPrint.document.close();
-            winPrint.focus();
-            winPrint.print();
+            const winPrint = window.open('', '', 'width=1000,height=600');
+            if (winPrint) {
+                winPrint.document.write(`<title>Print</title>${rowhtml}`);
+                winPrint.document.close();
+                winPrint.focus();
+                winPrint.print();
+            }
         }
     };
 
-    function handleDownloadExcel() {
-        const excelData = rowData.map((item) => ({
-            ID: item.id,
+    // Handle Excel export
+    const handleDownloadExcel = () => {
+        const excelData = initialRecords.map((item) => ({
+            ID: item._id,
             Product: item.product,
-            TotalQuantity: item.totalQuantity,
+            'Total Quantity': item.totalQuantity,
             'Total Price': `Rs. ${item.totalPrice.toLocaleString()}`,
             'Last Purchase Date': formatDate(item.lastPurchaseDate),
         }));
@@ -203,11 +182,31 @@ const Stock = () => {
             fileName: 'stock-report',
             sheet: 'Stock Details',
             tablePayload: {
-                header,
+                header: ['ID', 'Product', 'Total Quantity', 'Total Price', 'Last Purchase Date'],
                 body: excelData,
             },
         });
-    }
+    };
+
+    // Filter and sort records
+    useEffect(() => {
+        const filteredData = initialRecords.filter((item) => {
+            const searchTerm = search.toLowerCase();
+            return (
+                item.product.toLowerCase().includes(searchTerm) ||
+                item.totalQuantity.toString().includes(searchTerm) ||
+                item.totalPrice.toString().includes(searchTerm) ||
+                formatDate(item.lastPurchaseDate).toLowerCase().includes(searchTerm)
+            );
+        });
+
+        const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
+        const sorted = sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData;
+
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize;
+        setRecordsData(sorted.slice(from, to));
+    }, [search, sortStatus, page, pageSize, initialRecords]);
 
     return (
         <div className="panel mt-6">
@@ -228,11 +227,12 @@ const Stock = () => {
                     </button>
                 </div>
 
-                {/* Filters and Search */}
-                <div className="flex items-center gap-2">
+                {/* Search */}
+                <div className="ltr:ml-auto rtl:mr-auto">
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
             </div>
+
             {/* DataTable */}
             <div className="datatables">
                 <DataTable
@@ -240,17 +240,19 @@ const Stock = () => {
                     className="whitespace-nowrap table-hover"
                     records={recordsData}
                     columns={[
-                        { accessor: 'id', title: '#' },
+                        { accessor: '_id', title: '#' },
                         { accessor: 'product', title: 'Product', sortable: true },
                         { accessor: 'totalQuantity', title: 'Total Quantity', sortable: true },
                         {
                             accessor: 'totalPrice',
                             title: 'Total Price',
+                            sortable: true,
                             render: ({ totalPrice }) => `Rs. ${totalPrice.toLocaleString()}`,
                         },
                         {
                             accessor: 'lastPurchaseDate',
                             title: 'Last Purchase',
+                            sortable: true,
                             render: ({ lastPurchaseDate }) => formatDate(lastPurchaseDate),
                         },
                         {
@@ -266,17 +268,19 @@ const Stock = () => {
                     totalRecords={initialRecords.length}
                     recordsPerPage={pageSize}
                     page={page}
-                    onPageChange={(p) => setPage(p)}
+                    onPageChange={setPage}
                     recordsPerPageOptions={PAGE_SIZES}
                     onRecordsPerPageChange={setPageSize}
-                    sortStatus={sortStatus}
+                    sortStatus={sortStatus as any}
                     onSortStatusChange={setSortStatus}
                     minHeight={200}
-                    noRecordsText="No records"
+                    noRecordsText="No stocks found"
                     paginationText={({ from, to, totalRecords }) => `Showing ${from} to ${to} of ${totalRecords} entries`}
                 />
             </div>
-            {isModalOpen && <StockModal stock={selectedStock} onClose={() => setIsModalOpen(false)} />}
+
+            {/* Stock Details Modal */}
+            {isModalOpen && selectedStock && <StockModal stock={selectedStock} onClose={() => setIsModalOpen(false)} />}
         </div>
     );
 };

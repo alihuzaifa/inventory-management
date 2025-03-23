@@ -12,7 +12,7 @@ const StockModal = ({ stock, onClose }: any) => {
     };
 
     return (
-        <div className="absolute inset-0 flex items-center justify-center z-50">
+        <div className="absolute inset-0 flex items-center justify-center flex-wrap z-50">
             <div className="p-6 panel rounded-lg shadow-xl w-2/3 bg-white">
                 {' '}
                 {/* Increased width */}

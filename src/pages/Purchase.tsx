@@ -1,110 +1,170 @@
 import { useEffect, useRef, useState } from 'react';
-import * as Yup from 'yup';
-import { Field, Form, Formik } from 'formik';
-import Swal from 'sweetalert2';
+import { DataTable } from 'mantine-datatable';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../store/themeConfigSlice';
-import { DataTable, DataTableSortStatus } from 'mantine-datatable';
-import { capitalize, sortBy } from 'lodash';
+import IconFile from '../components/Icon/IconFile';
 import IconEdit from '../components/Icon/IconEdit';
 import IconTrash from '../components/Icon/IconTrash';
-import IconFile from '../components/Icon/IconFile';
-import IconPrinter from '../components/Icon/IconPrinter';
+import { Field, Form, Formik } from 'formik';
+import * as Yup from 'yup';
 import { downloadExcel } from 'react-export-table-to-excel';
+import sortBy from 'lodash/sortBy';
+import Swal from 'sweetalert2';
+import InventoryManagement from '../services/api';
+import { capitalize } from 'lodash';
+import IconPrinter from '../components/Icon/IconPrinter';
 
-const col = ['id', 'supplier', 'product', 'quantity', 'price', 'totalPrice', 'purchaseDate'];
-const header = ['Id', 'Supplier', 'Product', 'Quantity', 'Price', 'Total Price', 'Purchase Date'];
+// Constants
+const PAGE_SIZES = [10, 20, 30, 50, 100];
+
+const col = ['supplier', 'product', 'quantity', 'price', 'totalPrice', 'purchaseDate'];
+const header = ['Supplier', 'Product', 'Quantity', 'Price', 'Total Price', 'Purchase Date'];
+
+// Interfaces
+interface Purchase {
+    _id: string;
+    supplier: string;
+    product: string;
+    quantity: number;
+    price: number;
+    totalPrice: number;
+    purchaseDate: string;
+}
+
+interface FormValues {
+    supplier: string;
+    product: string;
+    quantity: string | number;
+    price: string | number;
+    totalPrice: string | number;
+}
+
+// Validation Schema
+const purchaseSchema = Yup.object().shape({
+    supplier: Yup.string().required('Supplier is required'),
+    product: Yup.string().required('Product is required'),
+    quantity: Yup.number().required('Quantity is required').positive('Quantity must be positive'),
+    price: Yup.number().required('Price is required').positive('Price must be positive'),
+    totalPrice: Yup.number().required('Total Price is required').positive('Total Price must be positive'),
+});
 
 const Purchase = () => {
     const dispatch = useDispatch();
+    const formikRef = useRef<any>(null);
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+    const [initialRecords, setInitialRecords] = useState<Purchase[]>([]);
+    const [recordsData, setRecordsData] = useState<Purchase[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [editMode, setEditMode] = useState(false);
+    const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
+    const [sortStatus, setSortStatus] = useState({ columnAccessor: 'purchaseDate', direction: 'desc' });
+
     useEffect(() => {
-        dispatch(setPageTitle('Purchase Form'));
+        dispatch(setPageTitle('Purchase'));
+        fetchPurchases();
     }, []);
 
-    const [editMode, setEditMode] = useState(false);
-    const formikRef = useRef<any>(null);
-    const [rowData, setRowData] = useState<any[]>([]);
-
-    const submitForm = (values: any) => {
-        const newPurchase = {
-            id: rowData.length + 1,
-            supplier: values.supplier,
-            product: values.product,
-            quantity: Number(values.quantity),
-            price: Number(values.price),
-            totalPrice: Number(values.totalPrice),
-            purchaseDate: new Date().toISOString().split('T')[0],
-        };
-        console.log('newPurchase', newPurchase);
-        setRowData([...rowData, newPurchase]);
-
-        const toast = Swal.mixin({
-            toast: true,
-            position: 'top',
-            showConfirmButton: false,
-            timer: 3000,
-        });
-        toast.fire({
-            icon: 'success',
-            title: 'Purchase added successfully',
-            padding: '10px 20px',
-        });
+    // Fetch purchases
+    const fetchPurchases = async () => {
+        try {
+            setLoading(true);
+            const response = await InventoryManagement.GetAllPurchases();
+            if (response) {
+                setInitialRecords(response);
+            }
+        } catch (error: any) {
+            console.error('Error fetching purchases:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to fetch purchases',
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const purchaseSchema = Yup.object().shape({
-        supplier: Yup.string(), // Optional supplier
-        product: Yup.string().required('Product name is required'),
-        quantity: Yup.number().required('Quantity is required').positive('Quantity must be positive'),
-        price: Yup.number().required('Price is required').positive('Price must be positive'),
-    });
+    // Handle edit
+    const handleEdit = (purchase: Purchase) => {
+        setSelectedPurchaseId(purchase._id);
+        setEditMode(true);
+        if (formikRef.current) {
+            formikRef.current.setValues({
+                supplier: purchase.supplier,
+                product: purchase.product,
+                quantity: purchase.quantity,
+                price: purchase.price,
+                totalPrice: purchase.totalPrice,
+            });
+        }
+    };
 
-    // Table configuration
-    const [page, setPage] = useState(1);
-    const PAGE_SIZES = [10, 20, 30, 50, 100];
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState<any[]>([]);
-    const [recordsData, setRecordsData] = useState<any[]>([]);
-    const [search, setSearch] = useState('');
-    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
+    // Handle delete
+    const handleDelete = async (id: string) => {
+        try {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!',
+                padding: '2em',
+            });
 
-    useEffect(() => {
-        setInitialRecords(sortBy(rowData, 'id'));
-    }, [rowData]);
+            if (result.value) {
+                await InventoryManagement.DeletePurchase(id);
+                await fetchPurchases();
+                Swal.fire('Deleted!', 'Purchase has been deleted.', 'success');
+            }
+        } catch (error: any) {
+            console.error('Error deleting purchase:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to delete purchase',
+            });
+        }
+    };
 
-    useEffect(() => {
-        const filteredData = initialRecords.filter((item: any) => {
-            const searchLower = search.toLowerCase();
-            return (
-                item.id.toString().includes(searchLower) ||
-                item.supplier.toLowerCase().includes(searchLower) ||
-                item.product.toLowerCase().includes(searchLower) ||
-                item.quantity.toString().includes(searchLower) ||
-                item.price.toString().includes(searchLower) ||
-                item.totalPrice.toString().includes(searchLower) ||
-                formatDate(item.purchaseDate).toLowerCase().includes(searchLower)
-            );
-        });
+    // Submit form
+    const submitForm = async (values: FormValues, { resetForm }: any) => {
+        try {
+            setLoading(true);
+            const purchaseData = {
+                ...values,
+                quantity: Number(values.quantity),
+                price: Number(values.price),
+                totalPrice: Number(values.totalPrice),
+                purchaseDate: new Date().toISOString(),
+            };
 
-        const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
-        const sorted = sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData;
+            if (editMode) {
+                await InventoryManagement.UpdatePurchase(selectedPurchaseId, purchaseData);
+                Swal.fire('Updated!', 'Purchase has been updated.', 'success');
+            } else {
+                await InventoryManagement.CreatePurchase(purchaseData);
+                Swal.fire('Added!', 'Purchase has been added.', 'success');
+            }
 
-        setInitialRecords(sorted);
+            resetForm();
+            setEditMode(false);
+            setSelectedPurchaseId('');
+            await fetchPurchases();
+        } catch (error: any) {
+            console.error('Error submitting purchase:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Failed to submit purchase',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize;
-        setRecordsData(sorted.slice(from, to));
-    }, [search, sortStatus, page, pageSize, initialRecords]);
-
-    useEffect(() => {
-        setPage(1);
-    }, [pageSize]);
-
-    useEffect(() => {
-        const data = sortBy(initialRecords, sortStatus.columnAccessor);
-        setInitialRecords(sortStatus.direction === 'desc' ? data.reverse() : data);
-        setPage(1);
-    }, [sortStatus]);
-
+    // Format date
     const formatDate = (date: string) => {
         if (date) {
             const dt = new Date(date);
@@ -115,40 +175,9 @@ const Purchase = () => {
         return '';
     };
 
-    const handleEdit = (id: number) => {
-        const purchase = rowData.find((item) => item.id === id);
-        if (purchase && formikRef.current) {
-            formikRef.current.setValues({
-                supplier: purchase.supplier,
-                product: purchase.product,
-                quantity: purchase.quantity,
-                price: purchase.price,
-                totalPrice: purchase.totalPrice,
-            });
-            setEditMode(true);
-        }
-    };
-
-    const handleDelete = (id: number) => {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, delete it!',
-            padding: '2em',
-        }).then((result) => {
-            if (result.value) {
-                const updatedData = rowData.filter((item) => item.id !== id);
-                setRowData(updatedData);
-                Swal.fire('Deleted!', 'Purchase has been deleted.', 'success');
-            }
-        });
-    };
-
     const exportTable = (type: string) => {
         let columns: any = col;
-        let records = rowData;
+        let records = initialRecords;
         let filename = 'Purchase Record';
 
         let newVariable: any;
@@ -227,8 +256,8 @@ const Purchase = () => {
     };
 
     function handleDownloadExcel() {
-        const excelData = rowData.map((item) => ({
-            ID: item.id,
+        const excelData = initialRecords.map((item) => ({
+            ID: item._id,
             Supplier: item.supplier,
             Product: item.product,
             Quantity: item.quantity,
@@ -246,12 +275,31 @@ const Purchase = () => {
             },
         });
     }
+    // Filter records based on search
+    useEffect(() => {
+        const filteredData = initialRecords.filter((item) => {
+            return (
+                item.supplier.toLowerCase().includes(search.toLowerCase()) ||
+                item.product.toLowerCase().includes(search.toLowerCase()) ||
+                item.quantity.toString().includes(search) ||
+                item.price.toString().includes(search) ||
+                item.totalPrice.toString().includes(search) ||
+                formatDate(item.purchaseDate).includes(search)
+            );
+        });
+
+        const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
+        setRecordsData(sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData);
+    }, [search, sortStatus, initialRecords]);
 
     return (
         <>
             <div className="panel">
                 <div className="mb-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light mb-4">{editMode ? 'Edit Purchase' : 'Add Purchase'}</h5>
+                    <h5 className="font-semibold text-lg dark:text-white-light">{editMode ? 'Edit Purchase' : 'Add New Purchase'}</h5>
+                </div>
+
+                <div className="mb-5">
                     <Formik
                         innerRef={formikRef}
                         initialValues={{
@@ -262,27 +310,26 @@ const Purchase = () => {
                             totalPrice: '',
                         }}
                         validationSchema={purchaseSchema}
-                        onSubmit={(values, { resetForm }) => {
-                            submitForm(values);
-                            resetForm();
-                            setEditMode(false);
-                        }}
+                        onSubmit={submitForm}
                     >
-                        {({ errors, submitCount, values, setFieldValue }) => (
+                        {({ errors, touched, values, setFieldValue, submitCount }) => (
                             <Form className="space-y-5">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div>
-                                        <label htmlFor="supplier">Supplier</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className={`${errors.supplier && touched.supplier && submitCount > 0 ? 'has-error' : 'has-success'}`}>
+                                        <label htmlFor="supplier">Supplier Name *</label>
                                         <Field name="supplier" type="text" id="supplier" placeholder="Enter Supplier Name" className="form-input" />
+                                        {submitCount > 0 && errors.supplier && <div className="text-danger mt-1">{errors.supplier}</div>}
                                     </div>
 
-                                    <div className={submitCount ? (errors.product ? 'has-error' : 'has-success') : ''}>
+                                    <div className={`${errors.product && touched.product && submitCount > 0 ? 'has-error' : 'has-success'}`}>
                                         <label htmlFor="product">Product Name *</label>
                                         <Field name="product" type="text" id="product" placeholder="Enter Product Name" className="form-input" />
                                         {submitCount > 0 && errors.product && <div className="text-danger mt-1">{errors.product}</div>}
                                     </div>
+                                </div>
 
-                                    <div className={submitCount ? (errors.quantity ? 'has-error' : 'has-success') : ''}>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                    <div className={`${errors.quantity && touched.quantity && submitCount > 0 ? 'has-error' : 'has-success'}`}>
                                         <label htmlFor="quantity">Quantity *</label>
                                         <Field
                                             name="quantity"
@@ -299,9 +346,8 @@ const Purchase = () => {
                                         />
                                         {submitCount > 0 && errors.quantity && <div className="text-danger mt-1">{errors.quantity}</div>}
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div className={submitCount ? (errors.price ? 'has-error' : 'has-success') : ''}>
+
+                                    <div className={`${errors.price && touched.price && submitCount > 0 ? 'has-error' : 'has-success'}`}>
                                         <label htmlFor="price">Price *</label>
                                         <Field
                                             name="price"
@@ -321,24 +367,44 @@ const Purchase = () => {
 
                                     <div>
                                         <label htmlFor="totalPrice">Total Price</label>
-                                        <Field name="totalPrice" type="number" id="totalPrice" placeholder="Total Price" className="form-input" disabled />
+                                        <Field name="totalPrice" type="number" id="totalPrice" className="form-input" disabled />
                                     </div>
                                 </div>
-                                <div className="flex justify-end">
+
+                                <div className="flex justify-end gap-4">
                                     {editMode && (
                                         <button
                                             type="button"
-                                            className="btn btn-danger ml-4"
+                                            className="btn btn-danger"
                                             onClick={() => {
                                                 setEditMode(false);
+                                                setSelectedPurchaseId('');
                                                 formikRef.current.resetForm();
                                             }}
                                         >
                                             Cancel
                                         </button>
                                     )}
-                                    <button type="submit" className="btn btn-primary">
-                                        {editMode ? 'Update Purchase' : 'Add Purchase'}
+                                    <button type="submit" className="btn btn-primary" disabled={loading}>
+                                        {loading ? (
+                                            <span className="flex items-center">
+                                                <span className="animate-spin mr-2">
+                                                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                        <path
+                                                            className="opacity-75"
+                                                            fill="currentColor"
+                                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                        />
+                                                    </svg>
+                                                </span>
+                                                {editMode ? 'Updating...' : 'Saving...'}
+                                            </span>
+                                        ) : editMode ? (
+                                            'Update Purchase'
+                                        ) : (
+                                            'Add Purchase'
+                                        )}
                                     </button>
                                 </div>
                             </Form>
@@ -348,7 +414,7 @@ const Purchase = () => {
             </div>
 
             <div className="panel mt-6">
-                <div className="flex md:items-center justify-between md:flex-row flex-col mb-4.5 gap-5">
+                <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
                     <div className="flex items-center flex-wrap">
                         <button type="button" onClick={() => exportTable('csv')} className="btn btn-primary btn-sm m-1 ">
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
@@ -364,7 +430,9 @@ const Purchase = () => {
                         </button>
                     </div>
 
-                    <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <div className="ltr:ml-auto rtl:mr-auto">
+                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    </div>
                 </div>
 
                 <div className="datatables">
@@ -373,7 +441,7 @@ const Purchase = () => {
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
-                            { accessor: 'id', title: '#', sortable: true },
+                            { accessor: '_id', title: '#', sortable: true },
                             { accessor: 'supplier', title: 'Supplier', sortable: true },
                             { accessor: 'product', title: 'Product', sortable: true },
                             { accessor: 'quantity', title: 'Quantity', sortable: true },
@@ -399,11 +467,11 @@ const Purchase = () => {
                                 accessor: 'actions',
                                 title: 'Actions',
                                 render: (row) => (
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleEdit(row.id)}>
+                                    <div className="flex gap-2">
+                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleEdit(row)}>
                                             <IconEdit className="w-4 h-4" />
                                         </button>
-                                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(row.id)}>
+                                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(row._id)}>
                                             <IconTrash className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -413,10 +481,10 @@ const Purchase = () => {
                         totalRecords={initialRecords.length}
                         recordsPerPage={pageSize}
                         page={page}
-                        onPageChange={(p) => setPage(p)}
+                        onPageChange={setPage}
                         recordsPerPageOptions={PAGE_SIZES}
                         onRecordsPerPageChange={setPageSize}
-                        sortStatus={sortStatus}
+                        sortStatus={sortStatus as any}
                         onSortStatusChange={setSortStatus}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing ${from} to ${to} of ${totalRecords} entries`}
