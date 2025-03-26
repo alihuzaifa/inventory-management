@@ -1,5 +1,29 @@
-const StockModal = ({ stock, onClose }: any) => {
-    if (!stock || !stock.stocks || !Array.isArray(stock.stocks)) return null;
+interface StockEntry {
+    _id: string;
+    quantity: number;
+    price: number;
+    totalPrice: number;
+    purchaseDate: string;
+    supplier: string;
+}
+
+interface Stock {
+    product: string;
+    totalQuantity: number;
+    totalAmount: number;
+    averagePrice: number;
+    lastPurchaseDate: string;
+    purchaseCount: number;
+    purchases: StockEntry[];
+}
+
+interface StockModalProps {
+    stock: Stock;
+    onClose: () => void;
+}
+
+const StockModal: React.FC<StockModalProps> = ({ stock, onClose }) => {
+    if (!stock || !stock.purchases || !Array.isArray(stock.purchases)) return null;
 
     const formatDate = (date: string) => {
         if (date) {
@@ -14,8 +38,6 @@ const StockModal = ({ stock, onClose }: any) => {
     return (
         <div className="absolute inset-0 flex items-center justify-center flex-wrap z-50">
             <div className="p-6 panel rounded-lg shadow-xl w-2/3 bg-white">
-                {' '}
-                {/* Increased width */}
                 <h2 className="text-xl font-semibold mb-4">Stock Details - {stock.product}</h2>
                 <table className="table-auto w-full border">
                     <thead>
@@ -28,13 +50,13 @@ const StockModal = ({ stock, onClose }: any) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {stock.stocks.map((item: any, index: number) => (
-                            <tr key={index}>
+                        {stock.purchases.map((item: StockEntry) => (
+                            <tr key={item._id}>
                                 <td className="border px-4 py-2">{item.supplier}</td>
                                 <td className="border px-4 py-2">{item.quantity}</td>
                                 <td className="border px-4 py-2">Rs. {item.price.toLocaleString()}</td>
-                                <td className="border px-4 py-2">Rs. {(item.quantity * item.price).toLocaleString()}</td>
-                                <td className="border px-4 py-2">{formatDate(item.date)}</td>
+                                <td className="border px-4 py-2">Rs. {item.totalPrice.toLocaleString()}</td>
+                                <td className="border px-4 py-2">{formatDate(item.purchaseDate)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -42,8 +64,8 @@ const StockModal = ({ stock, onClose }: any) => {
                         <tr>
                             <td className="border px-4 py-2 font-semibold">Total</td>
                             <td className="border px-4 py-2 font-semibold">{stock.totalQuantity}</td>
-                            <td className="border px-4 py-2"></td>
-                            <td className="border px-4 py-2 font-semibold">Rs. {stock.totalPrice.toLocaleString()}</td>
+                            <td className="border px-4 py-2 font-semibold">Rs. {stock.averagePrice.toLocaleString()}</td>
+                            <td className="border px-4 py-2 font-semibold">Rs. {stock.totalAmount.toLocaleString()}</td>
                             <td className="border px-4 py-2"></td>
                         </tr>
                     </tfoot>

@@ -168,11 +168,14 @@ const CreatePurchase = async (data: any) => {
     }
 };
 
-const GetAllPurchases = async () => {
+// ... existing code ...
+
+const GetAllPurchases = async (page: number = 1, limit: number = 10) => {
     try {
         const response = await request({
             url: `${BASE_URL}purchases`,
             method: URL_METHODS.GET,
+            params: { page, limit }
         });
         return response;
     } catch (error) {

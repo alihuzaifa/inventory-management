@@ -17,20 +17,33 @@ const PAGE_SIZES = [10, 20, 30, 50, 100];
 
 // Interfaces
 interface StockEntry {
-    supplier: string;
+    _id: string;
     quantity: number;
     price: number;
-    date: string;
+    totalPrice: number;
+    purchaseDate: string;
+    supplier: string;
 }
 
 interface Stock {
-    _id: string;
-    shopId: string;
     product: string;
     totalQuantity: number;
-    totalPrice: number;
+    totalAmount: number;
+    averagePrice: number;
     lastPurchaseDate: string;
-    stocks: StockEntry[];
+    purchaseCount: number;
+    purchases: StockEntry[];
+}
+
+interface PaginationInfo {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+}
+
+interface APIResponse {
+    stocks: Stock[];
+    pagination: PaginationInfo;
 }
 
 const Stock = () => {
@@ -44,6 +57,11 @@ const Stock = () => {
     const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [sortStatus, setSortStatus] = useState({ columnAccessor: 'product', direction: 'asc' });
+    const [pagination, setPagination] = useState<PaginationInfo>({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0
+    });
 
     useEffect(() => {
         dispatch(setPageTitle('Stock Management'));
@@ -54,9 +72,10 @@ const Stock = () => {
     const fetchStocks = async () => {
         try {
             setLoading(true);
-            const response = await InventoryManagement.GetAllStocks();
+            const response: APIResponse = await InventoryManagement.GetAllStocks();
             if (response) {
-                setInitialRecords(response);
+                setInitialRecords(response.stocks);
+                setPagination(response.pagination);
             }
         } catch (error: any) {
             console.error('Error fetching stocks:', error);
@@ -81,25 +100,13 @@ const Stock = () => {
 
     // Handle view stock details
     const handleViewDetails = async (stock: Stock) => {
-        try {
-            const response = await InventoryManagement.GetStockHistory(stock.product);
-            if (response) {
-                setSelectedStock({ ...stock, stocks: response.history });
-                setIsModalOpen(true);
-            }
-        } catch (error: any) {
-            console.error('Error fetching stock history:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.response?.data?.message || 'Failed to fetch stock history',
-            });
-        }
+        setSelectedStock(stock);
+        setIsModalOpen(true);
     };
 
     // Export table as CSV
     const exportTable = (type: string) => {
-        let columns = ['_id', 'product', 'totalQuantity', 'totalPrice', 'lastPurchaseDate'];
+        let columns = ['product', 'totalQuantity', 'totalAmount', 'averagePrice', 'lastPurchaseDate', 'purchaseCount'];
         let records = initialRecords;
         let filename = 'Stock Report';
 
@@ -113,7 +120,7 @@ const Stock = () => {
                 columns.forEach((d, index) => {
                     if (index > 0) result += coldelimiter;
                     let val = item[d as keyof Stock] || '';
-                    if (d === 'totalPrice') val = `Rs. ${val.toLocaleString()}`;
+                    if (d === 'totalAmount' || d === 'averagePrice') val = `Rs. ${(val as number).toLocaleString()}`;
                     if (d === 'lastPurchaseDate') val = formatDate(val as string);
                     result += val;
                 });
@@ -126,7 +133,6 @@ const Stock = () => {
             link.setAttribute('download', filename + '.csv');
             link.click();
         } else if (type === 'print') {
-            // Print functionality
             let rowhtml = `<p>${filename}</p>`;
             rowhtml += `<table style="width: 100%;" cellpadding="0" cellspacing="0">
                 <thead><tr style="color: #515365; background: #eff5ff; print-color-adjust: exact;">`;
@@ -141,7 +147,7 @@ const Stock = () => {
                 rowhtml += '<tr>';
                 columns.forEach((d) => {
                     let val = item[d as keyof Stock] || '';
-                    if (d === 'totalPrice') val = `Rs. ${(val as number).toLocaleString()}`;
+                    if (d === 'totalAmount' || d === 'averagePrice') val = `Rs. ${(val as number).toLocaleString()}`;
                     if (d === 'lastPurchaseDate') val = formatDate(val as string);
                     rowhtml += `<td>${val}</td>`;
                 });
@@ -171,18 +177,19 @@ const Stock = () => {
     // Handle Excel export
     const handleDownloadExcel = () => {
         const excelData = initialRecords.map((item) => ({
-            ID: item._id,
             Product: item.product,
             'Total Quantity': item.totalQuantity,
-            'Total Price': `Rs. ${item.totalPrice.toLocaleString()}`,
+            'Total Amount': `Rs. ${item.totalAmount.toLocaleString()}`,
+            'Average Price': `Rs. ${item.averagePrice.toLocaleString()}`,
             'Last Purchase Date': formatDate(item.lastPurchaseDate),
+            'Purchase Count': item.purchaseCount
         }));
 
         downloadExcel({
             fileName: 'stock-report',
             sheet: 'Stock Details',
             tablePayload: {
-                header: ['ID', 'Product', 'Total Quantity', 'Total Price', 'Last Purchase Date'],
+                header: ['Product', 'Total Quantity', 'Total Amount', 'Average Price', 'Last Purchase Date', 'Purchase Count'],
                 body: excelData,
             },
         });
@@ -195,7 +202,8 @@ const Stock = () => {
             return (
                 item.product.toLowerCase().includes(searchTerm) ||
                 item.totalQuantity.toString().includes(searchTerm) ||
-                item.totalPrice.toString().includes(searchTerm) ||
+                item.totalAmount.toString().includes(searchTerm) ||
+                item.averagePrice.toString().includes(searchTerm) ||
                 formatDate(item.lastPurchaseDate).toLowerCase().includes(searchTerm)
             );
         });
@@ -240,14 +248,19 @@ const Stock = () => {
                     className="whitespace-nowrap table-hover"
                     records={recordsData}
                     columns={[
-                        { accessor: '_id', title: '#' },
                         { accessor: 'product', title: 'Product', sortable: true },
                         { accessor: 'totalQuantity', title: 'Total Quantity', sortable: true },
                         {
-                            accessor: 'totalPrice',
-                            title: 'Total Price',
+                            accessor: 'totalAmount',
+                            title: 'Total Amount',
                             sortable: true,
-                            render: ({ totalPrice }) => `Rs. ${totalPrice.toLocaleString()}`,
+                            render: ({ totalAmount }) => `Rs. ${totalAmount.toLocaleString()}`,
+                        },
+                        {
+                            accessor: 'averagePrice',
+                            title: 'Average Price',
+                            sortable: true,
+                            render: ({ averagePrice }) => `Rs. ${averagePrice.toLocaleString()}`,
                         },
                         {
                             accessor: 'lastPurchaseDate',
@@ -256,16 +269,32 @@ const Stock = () => {
                             render: ({ lastPurchaseDate }) => formatDate(lastPurchaseDate),
                         },
                         {
+                            accessor: 'purchaseCount',
+                            title: 'Purchase Count',
+                            sortable: true,
+                        },
+                        {
                             accessor: 'action',
                             title: 'Action',
-                            render: (row) => (
-                                <button onClick={() => handleViewDetails(row)} className="btn btn-primary btn-sm">
+                            render: ({ product, totalQuantity, totalAmount, averagePrice, lastPurchaseDate, purchaseCount, purchases }) => (
+                                <button
+                                    onClick={() => handleViewDetails({
+                                        product,
+                                        totalQuantity,
+                                        totalAmount,
+                                        averagePrice,
+                                        lastPurchaseDate,
+                                        purchaseCount,
+                                        purchases
+                                    })}
+                                    className="btn btn-primary btn-sm"
+                                >
                                     <IconEye className="w-5 h-5" />
                                 </button>
                             ),
                         },
                     ]}
-                    totalRecords={initialRecords.length}
+                    totalRecords={pagination.totalItems}
                     recordsPerPage={pageSize}
                     page={page}
                     onPageChange={setPage}

@@ -274,7 +274,7 @@ const KhataSale = () => {
         }
 
         const newInvoice: InvoiceRecord = {
-            id: initialRecords.length + 1,
+            id: initialRecords?.length + 1,
             customerName: customerData.customerName,
             phoneNumber: customerData.phoneNumber,
             paymentTypes: customerData.paymentTypes,

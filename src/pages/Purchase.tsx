@@ -29,6 +29,9 @@ interface Purchase {
     price: number;
     totalPrice: number;
     purchaseDate: string;
+    shopId: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 interface FormValues {
@@ -60,19 +63,24 @@ const Purchase = () => {
     const [editMode, setEditMode] = useState(false);
     const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>('');
     const [sortStatus, setSortStatus] = useState({ columnAccessor: 'purchaseDate', direction: 'desc' });
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     useEffect(() => {
         dispatch(setPageTitle('Purchase'));
         fetchPurchases();
-    }, []);
+    }, [page, pageSize]);
 
     // Fetch purchases
     const fetchPurchases = async () => {
         try {
             setLoading(true);
-            const response = await InventoryManagement.GetAllPurchases();
-            if (response) {
-                setInitialRecords(response);
+            const response = await InventoryManagement.GetAllPurchases(page, pageSize);
+            if (response.purchases) {
+                setInitialRecords(response.purchases);
+                setRecordsData(response.purchases);
+                setTotalItems(response.pagination.totalItems);
+                setTotalPages(response.pagination.totalPages);
             }
         } catch (error: any) {
             console.error('Error fetching purchases:', error);
@@ -256,7 +264,7 @@ const Purchase = () => {
     };
 
     function handleDownloadExcel() {
-        const excelData = initialRecords.map((item) => ({
+        const excelData = initialRecords?.map((item) => ({
             ID: item._id,
             Supplier: item.supplier,
             Product: item.product,
@@ -275,21 +283,25 @@ const Purchase = () => {
             },
         });
     }
+
     // Filter records based on search
     useEffect(() => {
-        const filteredData = initialRecords.filter((item) => {
-            return (
-                item.supplier.toLowerCase().includes(search.toLowerCase()) ||
-                item.product.toLowerCase().includes(search.toLowerCase()) ||
-                item.quantity.toString().includes(search) ||
-                item.price.toString().includes(search) ||
-                item.totalPrice.toString().includes(search) ||
-                formatDate(item.purchaseDate).includes(search)
-            );
-        });
-
-        const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
-        setRecordsData(sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData);
+        if (search) {
+            const filteredData = initialRecords?.filter((item) => {
+                return (
+                    item.supplier.toLowerCase().includes(search.toLowerCase()) ||
+                    item.product.toLowerCase().includes(search.toLowerCase()) ||
+                    item.quantity.toString().includes(search) ||
+                    item.price.toString().includes(search) ||
+                    item.totalPrice.toString().includes(search) ||
+                    formatDate(item.purchaseDate).includes(search)
+                );
+            });
+            const sortedData = sortBy(filteredData, sortStatus.columnAccessor);
+            setRecordsData(sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData);
+        } else {
+            setRecordsData(initialRecords);
+        }
     }, [search, sortStatus, initialRecords]);
 
     return (
@@ -441,7 +453,6 @@ const Purchase = () => {
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
-                            { accessor: '_id', title: '#', sortable: true },
                             { accessor: 'supplier', title: 'Supplier', sortable: true },
                             { accessor: 'product', title: 'Product', sortable: true },
                             { accessor: 'quantity', title: 'Quantity', sortable: true },
@@ -478,12 +489,15 @@ const Purchase = () => {
                                 ),
                             },
                         ]}
-                        totalRecords={initialRecords.length}
+                        totalRecords={totalItems}
                         recordsPerPage={pageSize}
                         page={page}
-                        onPageChange={setPage}
+                        onPageChange={(p) => setPage(p)}
                         recordsPerPageOptions={PAGE_SIZES}
-                        onRecordsPerPageChange={setPageSize}
+                        onRecordsPerPageChange={(newPageSize) => {
+                            setPageSize(newPageSize);
+                            setPage(1);
+                        }}
                         sortStatus={sortStatus as any}
                         onSortStatusChange={setSortStatus}
                         minHeight={200}
