@@ -8,7 +8,7 @@ interface ProductItem {
 }
 
 interface InvoiceRecord {
-    id: number;
+    _id: string;
     customerName: string;
     phoneNumber: string;
     paymentTypes: string[];
@@ -93,7 +93,7 @@ const Invoice = ({ invoiceData }: InvoiceProps) => {
                 <div className="lg:w-1/2">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="text-gray-600 dark:text-gray-400">Invoice Number:</div>
-                        <div className="font-semibold">#{invoiceData.id}</div>
+                        <div className="font-semibold">#{invoiceData._id}</div>
 
                         <div className="text-gray-600 dark:text-gray-400">Payment Status:</div>
                         <div className="font-semibold">{calculatePaymentStatus(invoiceData)}</div>

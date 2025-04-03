@@ -250,6 +250,18 @@ const GetAllStocks = async () => {
     }
 };
 
+export const getProductStockForDropdown = async (): Promise<any> => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}/stocks/dropdown`,
+            method: URL_METHODS.GET,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 const GetStockByProduct = async (product: string) => {
     try {
         const response = await request({
@@ -338,6 +350,31 @@ const GetInvoicesByCustomer = async (params: { customerName?: string; phoneNumbe
     }
 };
 
+const UpdateInvoice = async (id: string, data: any) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/${id}`,
+            method: URL_METHODS.PUT,
+            data,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const DeleteInvoice = async (id: string) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/${id}`,
+            method: URL_METHODS.DELETE,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 const InventoryManagement = {
     Login,
     CreateUser,
@@ -365,5 +402,8 @@ const InventoryManagement = {
     GetInvoiceById,
     GetInvoicesByDateRange,
     GetInvoicesByCustomer,
+    getProductStockForDropdown,
+    DeleteInvoice,
+    UpdateInvoice
 }
 export default InventoryManagement;

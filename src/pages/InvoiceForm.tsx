@@ -56,7 +56,7 @@ interface CustomerDetails {
 }
 
 interface InvoiceRecord {
-    id: number;
+    _id: string;
     customerName: string;
     phoneNumber: string;
     paymentTypes: string[];
@@ -206,15 +206,14 @@ const Invoice = () => {
 
     const fetchProducts = async () => {
         try {
-            const response = await InventoryManagement.GetAllStocks();
-            const transformedData = response.map((product: any) => ({
-                id: product._id, // Using _id as the unique identifier
-                name: product.product,
-                quantities: product.stocks.map((stock: any) => {
-                    return { quantity: stock.quantity, _id: stock?._id };
-                }),
-            }));
-            setProducts(transformedData);
+            const response = await InventoryManagement.getProductStockForDropdown();
+            const allInvoices = await InventoryManagement.GetAllInvoices();
+            console.log('allInvoices', allInvoices);
+
+            if (allInvoices.invoices.length > 0) {
+                setInitialRecords(allInvoices.invoices)
+            }
+            setProducts(response);
         } catch (error: any) {
             console.error('Error fetching stocks:', error);
         }
@@ -349,32 +348,31 @@ const Invoice = () => {
             return;
         }
 
-        const newInvoice: any = {
-            customerName: customerData.customerName,
-            phoneNumber: customerData.phoneNumber,
-            paymentTypes: customerData.paymentTypes,
-            cashAmount: Number(customerData.cashAmount || 0),
-            bankAmount: Number(customerData.bankAmount || 0),
-            bankName: customerData.bankName,
-            checkAmount: Number(customerData.checkAmount || 0),
-            checkNumber: customerData.checkNumber,
-            products: currentProducts?.map((data: any) => {
+        const newInvoice = {
+            "customerName": customerData?.customerName,
+            "phoneNumber": customerData?.phoneNumber,
+            products: currentProducts.map((product) => {
                 return {
-                    product: data?.availableQuantityId,
-                    sellingQuantity: data?.sellingQuantity,
-                    price: data?.price,
-                    total: data?.totalPrice,
+                    product: product.availableQuantityId,
+                    availableQuantity: product.availableQuantity,
+                    sellingQuantity: product.sellingQuantity,
+                    price: product.price,
+                    totalPrice: product.totalPrice,
                 };
             }),
-            saleDate: new Date().toISOString(),
-            totalBillAmount,
+            "paymentTypes": customerData?.paymentTypes,
+            "cashAmount": Number(customerData?.cashAmount) || null,
+            "bankAmount": Number(customerData?.bankAmount) || null,
+            "bankName": customerData?.bankName || null,
+            "checkAmount": Number(customerData?.checkAmount) || null,
+            "checkNumber": customerData?.checkNumber || null,
+            "totalBillAmount": totalBillAmount,
             billType: (customerData.billType as 'perfect' | 'fake') || 'perfect',
-        };
-
+            "saleDate": new Date().toISOString()
+        }
         const createInvoice = await InventoryManagement.CreateInvoice(newInvoice)
-        console.log("🚀createInvoice:", createInvoice)
-
         // setInitialRecords([...initialRecords, newInvoice])
+        // console.log('dummyInvoice', newInvoice);
         setCurrentProducts([]);
         setCustomerData(null);
         setTotalBillAmount(0);
@@ -395,7 +393,7 @@ const Invoice = () => {
         setIsViewModalOpen(true);
     };
 
-    const handleDeleteInvoice = (invoiceId: number) => {
+    const handleDeleteInvoice = (invoiceId: string) => {
         Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
@@ -404,11 +402,12 @@ const Invoice = () => {
             confirmButtonText: 'Yes, delete it!',
             cancelButtonText: 'No, cancel!',
             reverseButtons: true,
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setInitialRecords((prev) => prev.filter((record) => record.id !== invoiceId));
-                setRecordsData((prev) => prev.filter((record) => record.id !== invoiceId));
-                Swal.fire('Deleted!', 'Invoice has been deleted.', 'success');
+                const deleteInvoice = await InventoryManagement.DeleteInvoice(invoiceId)
+                // setInitialRecords((prev) => prev.filter((record) => record.id !== invoiceId));
+                // setRecordsData((prev) => prev.filter((record) => record.id !== invoiceId));
+                // Swal.fire('Deleted!', 'Invoice has been deleted.', 'success');
             }
         });
     };
@@ -422,7 +421,7 @@ const Invoice = () => {
     };
 
     const exportTable = (type: string) => {
-        let columns: any = ['id', 'customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
+        let columns: any = ['customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
         let records = recordsData;
         let filename = 'Invoice Record';
 
@@ -515,7 +514,7 @@ const Invoice = () => {
 
     const handleDownloadExcel = () => {
         const excelData = recordsData.map((item) => ({
-            'Invoice #': item.id,
+            'Invoice #': item._id,
             Customer: item.customerName,
             Phone: item.phoneNumber,
             'Total Amount': `Rs. ${item.totalBillAmount.toLocaleString()}`,
@@ -569,7 +568,7 @@ const Invoice = () => {
         // Update records if validation passes
         setInitialRecords((prev) =>
             prev.map((record) => {
-                if (record.id === selectedInvoiceForPayment.id) {
+                if (record._id === selectedInvoiceForPayment._id) {
                     const updatedPaymentTypes = [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[];
                     return {
                         ...record,
@@ -588,7 +587,7 @@ const Invoice = () => {
         // Update recordsData to reflect changes
         setRecordsData((prev) =>
             prev.map((record) => {
-                if (record.id === selectedInvoiceForPayment.id) {
+                if (record._id === selectedInvoiceForPayment._id) {
                     const updatedPaymentTypes = [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[];
                     return {
                         ...record,
@@ -952,7 +951,7 @@ const Invoice = () => {
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
-                            { accessor: 'id', title: 'Invoice #', sortable: true },
+                            { accessor: '_id', title: 'Invoice #', sortable: true },
                             { accessor: 'customerName', title: 'Customer', sortable: true },
                             { accessor: 'phoneNumber', title: 'Phone', sortable: true },
                             {
@@ -998,7 +997,7 @@ const Invoice = () => {
                                                 Add Payment
                                             </button>
                                         )}
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row.id)}>
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row._id)}>
                                             Delete
                                         </button>
                                     </div>
