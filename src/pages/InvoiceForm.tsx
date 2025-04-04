@@ -182,7 +182,7 @@ const Invoice = () => {
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [search, setSearch] = useState('');
+    const [search] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'id', direction: 'asc' });
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -211,7 +211,7 @@ const Invoice = () => {
             console.log('allInvoices', allInvoices);
 
             if (allInvoices.invoices.length > 0) {
-                setInitialRecords(allInvoices.invoices)
+                setInitialRecords(allInvoices.invoices);
             }
             setProducts(response);
         } catch (error: any) {
@@ -262,6 +262,17 @@ const Invoice = () => {
         });
     };
 
+    const updateProductQuantity = (id: string, quantityToReduce: number) => {
+        setProducts((prevProducts) => {
+            return prevProducts
+                .map((product) => ({
+                    ...product,
+                    quantities: product.quantities.map((q: any) => (q._id === id ? { ...q, quantity: q.quantity - quantityToReduce } : q)).filter((q: any) => q.quantity > 0),
+                }))
+                .filter((product) => product.quantities.length > 0);
+        });
+    };
+
     const handleAddProduct = (values: FormikProductDetails, { resetForm }: any) => {
         // Create new product object
         const newProduct: ProductItem = {
@@ -273,6 +284,7 @@ const Invoice = () => {
             totalPrice: Number(values.totalPrice),
             availableQuantityId: values.availableQuantityId,
         };
+        updateProductQuantity(values.availableQuantityId, Number(values.sellingQuantity));
 
         // Update current products list
         const updatedProducts = [...currentProducts, newProduct];
@@ -329,63 +341,150 @@ const Invoice = () => {
         }
     };
 
-    const handleSaveInvoice = async () => {
-        if (currentProducts.length === 0) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Validation Error',
-                text: 'Please add at least one product',
-            });
-            return;
+    const createInvoicePayload = () => {
+        // Base invoice object with common fields
+        const baseInvoice = {
+            customerName: customerData?.customerName,
+            phoneNumber: customerData?.phoneNumber,
+            products: currentProducts.map((product) => ({
+                product: product.availableQuantityId,
+                availableQuantity: product.availableQuantity,
+                sellingQuantity: product.sellingQuantity,
+                price: product.price,
+                totalPrice: product.totalPrice,
+            })),
+            paymentTypes: customerData?.paymentTypes || [],
+            totalBillAmount: totalBillAmount,
+            billType: (customerData?.billType as 'perfect' | 'fake') || 'perfect',
+            saleDate: new Date().toISOString(),
+        };
+
+        // Payment specific fields
+        const paymentFields: any = {};
+
+        // Add cash payment if exists
+        if (customerData?.paymentTypes?.includes('cash') && customerData?.cashAmount) {
+            paymentFields.cashAmount = Number(customerData.cashAmount);
         }
 
-        if (!customerData) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Validation Error',
-                text: 'Please fill in customer details',
-            });
-            return;
+        // Add bank payment if exists
+        if (customerData?.paymentTypes?.includes('bank')) {
+            paymentFields.bankAmount = Number(customerData.bankAmount);
+            if (customerData?.bankName) {
+                paymentFields.bankName = customerData.bankName;
+            }
         }
 
+        // Add check payment if exists
+        if (customerData?.paymentTypes?.includes('check')) {
+            paymentFields.checkAmount = Number(customerData.checkAmount);
+            if (customerData?.checkNumber) {
+                paymentFields.checkNumber = customerData.checkNumber;
+            }
+        }
+
+        // Combine base invoice with payment fields
         const newInvoice = {
-            "customerName": customerData?.customerName,
-            "phoneNumber": customerData?.phoneNumber,
-            products: currentProducts.map((product) => {
-                return {
-                    product: product.availableQuantityId,
-                    availableQuantity: product.availableQuantity,
-                    sellingQuantity: product.sellingQuantity,
-                    price: product.price,
-                    totalPrice: product.totalPrice,
-                };
-            }),
-            "paymentTypes": customerData?.paymentTypes,
-            "cashAmount": Number(customerData?.cashAmount) || null,
-            "bankAmount": Number(customerData?.bankAmount) || null,
-            "bankName": customerData?.bankName || null,
-            "checkAmount": Number(customerData?.checkAmount) || null,
-            "checkNumber": customerData?.checkNumber || null,
-            "totalBillAmount": totalBillAmount,
-            billType: (customerData.billType as 'perfect' | 'fake') || 'perfect',
-            "saleDate": new Date().toISOString()
-        }
-        const createInvoice = await InventoryManagement.CreateInvoice(newInvoice)
-        // setInitialRecords([...initialRecords, newInvoice])
-        // console.log('dummyInvoice', newInvoice);
-        setCurrentProducts([]);
-        setCustomerData(null);
-        setTotalBillAmount(0);
+            ...baseInvoice,
+            ...paymentFields,
+        };
 
-        if (customerFormRef.current) {
-            customerFormRef.current.resetForm();
-        }
+        return newInvoice;
+    };
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Success',
-            text: 'Invoice saved successfully',
+    const handleFakeBillUpdate = () => {
+        setProducts((prevProducts) => {
+            return prevProducts.map((product) => {
+                // Find if this product is in currentProducts
+                const currentProduct = currentProducts.find((cp) => cp.product === product.id || cp.product === product.name);
+
+                if (currentProduct) {
+                    // Check if the quantity with this ID exists
+                    const quantityIndex = product.quantities.findIndex((q: any) => q._id === currentProduct.availableQuantityId);
+
+                    if (quantityIndex !== -1) {
+                        // Update existing quantity
+                        const updatedQuantities = [...product.quantities];
+                        updatedQuantities[quantityIndex] = {
+                            _id: currentProduct.availableQuantityId,
+                            quantity: currentProduct.availableQuantity,
+                            price: currentProduct.price,
+                            purchaseDate: new Date().toISOString(),
+                        };
+
+                        return {
+                            ...product,
+                            quantities: updatedQuantities,
+                        };
+                    } else {
+                        // Add new quantity entry
+                        return {
+                            ...product,
+                            quantities: [
+                                ...product.quantities,
+                                {
+                                    _id: currentProduct.availableQuantityId,
+                                    quantity: currentProduct.availableQuantity,
+                                    price: currentProduct.price,
+                                    purchaseDate: new Date().toISOString(),
+                                },
+                            ],
+                        };
+                    }
+                }
+                return product;
+            });
         });
+    };
+
+    const handleSaveInvoice = async () => {
+        try {
+            if (currentProducts.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please add at least one product',
+                });
+                return;
+            }
+
+            if (!customerData) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please fill in customer details',
+                });
+                return;
+            }
+
+            const newInvoice = createInvoicePayload();
+            const createInvoice = await InventoryManagement.CreateInvoice(newInvoice);
+            if (customerData?.billType === 'fake') {
+                handleFakeBillUpdate();
+            }
+            setInitialRecords((prev) => [...prev, createInvoice]);
+            setCurrentProducts([]);
+            setCustomerData(null);
+            setTotalBillAmount(0);
+
+            if (customerFormRef.current) {
+                customerFormRef.current.resetForm();
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Invoice saved successfully',
+            });
+        } catch (error) {
+            console.error('Error saving invoice:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to save the invoice. Please try again.',
+            });
+        }
     };
 
     const handleViewInvoice = (invoice: InvoiceRecord) => {
@@ -404,10 +503,22 @@ const Invoice = () => {
             reverseButtons: true,
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const deleteInvoice = await InventoryManagement.DeleteInvoice(invoiceId)
-                // setInitialRecords((prev) => prev.filter((record) => record.id !== invoiceId));
-                // setRecordsData((prev) => prev.filter((record) => record.id !== invoiceId));
-                // Swal.fire('Deleted!', 'Invoice has been deleted.', 'success');
+                try {
+                    await InventoryManagement.DeleteInvoice(invoiceId);
+                    setInitialRecords((prev) => prev.filter((record) => record._id !== invoiceId));
+                    setRecordsData((prev) => prev.filter((record) => record._id !== invoiceId));
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Invoice has been deleted successfully.',
+                        icon: 'success',
+                    });
+                } catch (error) {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to delete the invoice. Please try again.',
+                        icon: 'error',
+                    });
+                }
             }
         });
     };
@@ -658,7 +769,6 @@ const Invoice = () => {
                                                         if (selectedProduct) {
                                                             const selectedQtyObj = selectedProduct.quantities.find((qty: any) => qty.quantity.toString() === selectedQuantity);
                                                             if (selectedQtyObj) {
-                                                                console.log('Setting availableQuantityId:', selectedQtyObj._id); // Debugging log
                                                                 setFieldValue('availableQuantityId', selectedQtyObj._id);
                                                             } else {
                                                                 setFieldValue('availableQuantityId', '');
