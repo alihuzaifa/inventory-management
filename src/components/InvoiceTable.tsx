@@ -49,6 +49,7 @@ const InvoiceTable = ({
     handleAddPayment,
     handleDeleteInvoice,
     PAGE_SIZES,
+    isDeleting,
 }: any) => {
     const capitalize = (text: string) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
@@ -271,8 +272,8 @@ const InvoiceTable = ({
                                                 Add Payment
                                             </button>
                                         )}
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row._id)}>
-                                            Delete
+                                        <button className="btn btn-sm btn-danger" disabled={isDeleting} onClick={() => handleDeleteInvoice(row._id)}>
+                                            {isDeleting ? 'Deleting...' : 'Delete'}
                                         </button>
                                     </div>
                                 ),

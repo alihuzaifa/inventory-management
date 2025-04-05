@@ -52,6 +52,7 @@ interface CustomerDetails {
 
 interface InvoiceRecord {
     _id: string;
+    invoiceNumber: string;
     customerName: string;
     phoneNumber: string;
     paymentTypes: string[];
@@ -66,24 +67,6 @@ interface InvoiceRecord {
 }
 
 type PaymentType = 'cash' | 'bank' | 'check';
-
-interface FilterStates {
-    search: string;
-    dateRange: {
-        from: string;
-        to: string;
-    };
-    selectedPaymentMethod: PaymentType | 'all';
-}
-
-interface PaymentFormValues {
-    paymentTypes: PaymentType[];
-    cashAmount: string;
-    bankAmount: string;
-    bankName: string;
-    checkAmount: string;
-    checkNumber: string;
-}
 
 const products = [
     { id: 1, name: 'LED TV', quantities: [500, 100, 1000] },
@@ -273,7 +256,7 @@ const KhataSale = () => {
             return;
         }
 
-        const newInvoice: InvoiceRecord = {
+        const newInvoice: any = {
             _id: `${initialRecords?.length + 1}`,
             customerName: customerData.customerName,
             phoneNumber: customerData.phoneNumber,

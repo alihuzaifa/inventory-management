@@ -57,6 +57,7 @@ interface InvoiceRecord {
     saleDate: string;
     totalBillAmount: number;
     billType: 'perfect' | 'fake';
+    invoiceNumber: string;
 }
 
 type PaymentType = 'cash' | 'bank' | 'check';
@@ -90,6 +91,7 @@ const Invoice = () => {
     const [totalBillAmount, setTotalBillAmount] = useState(0);
     const customerFormRef = useRef<FormikProps<any>>(null);
     const [products, setProducts] = useState<any[]>([]);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
@@ -115,23 +117,33 @@ const Invoice = () => {
         dispatch(setPageTitle('Sale Form'));
     }, [dispatch]);
 
-    const fetchProducts = async () => {
+    const fetchStocksForDropdown = async () => {
         try {
             const response = await InventoryManagement.getProductStockForDropdown();
-            const allInvoices = await InventoryManagement.GetAllInvoices();
-            console.log('allInvoices', allInvoices);
-
-            if (allInvoices.invoices.length > 0) {
-                setInitialRecords(allInvoices.invoices);
-            }
             setProducts(response);
-        } catch (error: any) {
-            console.error('Error fetching stocks:', error);
+        } catch (error) {
+            console.error('Error fetching product stocks:', error);
         }
     };
 
+    const fetchAllInvoices = async () => {
+        try {
+            const allInvoices = await InventoryManagement.GetAllInvoices();
+            if (allInvoices.invoices.length > 0) {
+                setInitialRecords(allInvoices.invoices);
+            }
+        } catch (error) {
+            console.error('Error fetching invoices:', error);
+        }
+    };
+
+    // Optional combined fetch if needed
+    const fetchInitialData = async () => {
+        await Promise.all([fetchStocksForDropdown(), fetchAllInvoices()]);
+    };
+
     useEffect(() => {
-        fetchProducts();
+        fetchInitialData();
     }, []);
 
     useEffect(() => {
@@ -303,51 +315,6 @@ const Invoice = () => {
         return newInvoice;
     };
 
-    const handleFakeBillUpdate = () => {
-        setProducts((prevProducts) => {
-            return prevProducts.map((product) => {
-                // Find if this product is in currentProducts
-                const currentProduct = currentProducts.find((cp) => cp.product === product.id || cp.product === product.name);
-
-                if (currentProduct) {
-                    // Check if the quantity with this ID exists
-                    const quantityIndex = product.quantities.findIndex((q: any) => q._id === currentProduct.availableQuantityId);
-
-                    if (quantityIndex !== -1) {
-                        // Update existing quantity
-                        const updatedQuantities = [...product.quantities];
-                        updatedQuantities[quantityIndex] = {
-                            _id: currentProduct.availableQuantityId,
-                            quantity: currentProduct.availableQuantity,
-                            price: currentProduct.price,
-                            purchaseDate: new Date().toISOString(),
-                        };
-
-                        return {
-                            ...product,
-                            quantities: updatedQuantities,
-                        };
-                    } else {
-                        // Add new quantity entry
-                        return {
-                            ...product,
-                            quantities: [
-                                ...product.quantities,
-                                {
-                                    _id: currentProduct.availableQuantityId,
-                                    quantity: currentProduct.availableQuantity,
-                                    price: currentProduct.price,
-                                    purchaseDate: new Date().toISOString(),
-                                },
-                            ],
-                        };
-                    }
-                }
-                return product;
-            });
-        });
-    };
-
     const handleSaveInvoice = async () => {
         try {
             if (currentProducts.length === 0) {
@@ -370,9 +337,7 @@ const Invoice = () => {
 
             const newInvoice = createInvoicePayload();
             const createInvoice = await InventoryManagement.CreateInvoice(newInvoice);
-            if (customerData?.billType === 'fake') {
-                handleFakeBillUpdate();
-            }
+            await fetchStocksForDropdown();
             setInitialRecords((prev) => [...prev, createInvoice]);
             setCurrentProducts([]);
             setCustomerData(null);
@@ -403,8 +368,8 @@ const Invoice = () => {
         setIsViewModalOpen(true);
     };
 
-    const handleDeleteInvoice = (invoiceId: string) => {
-        Swal.fire({
+    const handleDeleteInvoice = async (invoiceId: string) => {
+        const result = await Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
             icon: 'warning',
@@ -412,26 +377,38 @@ const Invoice = () => {
             confirmButtonText: 'Yes, delete it!',
             cancelButtonText: 'No, cancel!',
             reverseButtons: true,
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await InventoryManagement.DeleteInvoice(invoiceId);
-                    setInitialRecords((prev) => prev.filter((record) => record._id !== invoiceId));
-                    setRecordsData((prev) => prev.filter((record) => record._id !== invoiceId));
-                    Swal.fire({
-                        title: 'Deleted!',
-                        text: 'Invoice has been deleted successfully.',
-                        icon: 'success',
-                    });
-                } catch (error) {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to delete the invoice. Please try again.',
-                        icon: 'error',
-                    });
-                }
-            }
         });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            setIsDeleting(true);
+
+            await InventoryManagement.DeleteInvoice(invoiceId);
+
+            // Refresh stock dropdown after deletion
+            await fetchStocksForDropdown();
+
+            // Update state to remove the deleted invoice
+            setInitialRecords((prev) => prev.filter((record) => record._id !== invoiceId));
+            setRecordsData((prev) => prev.filter((record) => record._id !== invoiceId));
+
+            await Swal.fire({
+                title: 'Deleted!',
+                text: 'Invoice has been deleted successfully.',
+                icon: 'success',
+            });
+        } catch (error) {
+            console.error('Delete Invoice Error:', error);
+
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to delete the invoice. Please try again.',
+                icon: 'error',
+            });
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const calculateRemainingAmount = (invoice: InvoiceRecord): number => {
@@ -535,6 +512,7 @@ const Invoice = () => {
                 handleAddPayment={handleAddPayment}
                 handleDeleteInvoice={handleDeleteInvoice}
                 PAGE_SIZES={PAGE_SIZES}
+                isDeleting={isDeleting}
             />
 
             {/* Invoice View Modal */}
