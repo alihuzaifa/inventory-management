@@ -32,7 +32,7 @@ interface PaymentAmounts {
 
 // Product interface
 interface ProductItem {
-    id: number;
+    _id: string;
     product: string;
     availableQuantity: number;
     sellingQuantity: number;
@@ -171,7 +171,7 @@ const InvoiceHistory = () => {
                 checkAmount: 0,
                 products: [
                     {
-                        id: 1,
+                        _id: '12',
                         product: 'LED TV',
                         availableQuantity: 100,
                         sellingQuantity: 2,
@@ -193,7 +193,7 @@ const InvoiceHistory = () => {
                 checkAmount: 0,
                 products: [
                     {
-                        id: 1,
+                        _id: '2',
                         product: 'Laptop',
                         availableQuantity: 50,
                         sellingQuantity: 1,
@@ -216,7 +216,7 @@ const InvoiceHistory = () => {
                 checkNumber: 'CHK001',
                 products: [
                     {
-                        id: 1,
+                        _id: '223',
                         product: 'Refrigerator',
                         availableQuantity: 30,
                         sellingQuantity: 1,
@@ -238,7 +238,7 @@ const InvoiceHistory = () => {
                 checkAmount: 0,
                 products: [
                     {
-                        id: 1,
+                        _id: '344',
                         product: 'Mobile Phone',
                         availableQuantity: 200,
                         sellingQuantity: 1,
@@ -248,144 +248,6 @@ const InvoiceHistory = () => {
                 ],
                 saleDate: '2024-01-18',
                 totalBillAmount: 80000,
-                billType: 'fake',
-            },
-            {
-                id: 5,
-                customerName: 'David Miller',
-                phoneNumber: '12345678905',
-                paymentTypes: ['bank'],
-                cashAmount: 0,
-                bankAmount: 150000,
-                bankName: 'ABC Bank',
-                checkAmount: 0,
-                products: [
-                    {
-                        id: 1,
-                        product: 'Smart TV',
-                        availableQuantity: 75,
-                        sellingQuantity: 1,
-                        price: 150000,
-                        totalPrice: 150000,
-                    },
-                ],
-                saleDate: '2024-01-19',
-                totalBillAmount: 150000,
-                billType: 'perfect',
-            },
-            {
-                id: 6,
-                customerName: 'Emma Davis',
-                phoneNumber: '12345678906',
-                paymentTypes: ['cash'],
-                cashAmount: 40000,
-                bankAmount: 0,
-                checkAmount: 0,
-                products: [
-                    {
-                        id: 1,
-                        product: 'Washing Machine',
-                        availableQuantity: 45,
-                        sellingQuantity: 1,
-                        price: 60000,
-                        totalPrice: 60000,
-                    },
-                ],
-                saleDate: '2024-01-20',
-                totalBillAmount: 60000,
-                billType: 'fake',
-            },
-            {
-                id: 7,
-                customerName: 'Frank Johnson',
-                phoneNumber: '12345678907',
-                paymentTypes: ['check', 'cash'],
-                cashAmount: 30000,
-                bankAmount: 0,
-                checkAmount: 50000,
-                checkNumber: 'CHK002',
-                products: [
-                    {
-                        id: 1,
-                        product: 'Air Conditioner',
-                        availableQuantity: 25,
-                        sellingQuantity: 1,
-                        price: 80000,
-                        totalPrice: 80000,
-                    },
-                ],
-                saleDate: '2024-01-21',
-                totalBillAmount: 80000,
-                billType: 'perfect',
-            },
-            {
-                id: 8,
-                customerName: 'Grace Lee',
-                phoneNumber: '12345678908',
-                paymentTypes: ['bank', 'check'],
-                cashAmount: 0,
-                bankAmount: 70000,
-                bankName: 'XYZ Bank',
-                checkAmount: 30000,
-                checkNumber: 'CHK003',
-                products: [
-                    {
-                        id: 1,
-                        product: 'Gaming Console',
-                        availableQuantity: 60,
-                        sellingQuantity: 1,
-                        price: 100000,
-                        totalPrice: 100000,
-                    },
-                ],
-                saleDate: '2024-01-22',
-                totalBillAmount: 100000,
-                billType: 'fake',
-            },
-            {
-                id: 9,
-                customerName: 'Henry Wilson',
-                phoneNumber: '12345678909',
-                paymentTypes: ['cash', 'bank', 'check'],
-                cashAmount: 40000,
-                bankAmount: 30000,
-                bankName: 'DEF Bank',
-                checkAmount: 30000,
-                checkNumber: 'CHK004',
-                products: [
-                    {
-                        id: 1,
-                        product: 'Home Theater',
-                        availableQuantity: 35,
-                        sellingQuantity: 1,
-                        price: 100000,
-                        totalPrice: 100000,
-                    },
-                ],
-                saleDate: '2024-01-23',
-                totalBillAmount: 100000,
-                billType: 'perfect',
-            },
-            {
-                id: 10,
-                customerName: 'Isabel Garcia',
-                phoneNumber: '12345678910',
-                paymentTypes: ['cash'],
-                cashAmount: 40000,
-                bankAmount: 0,
-                checkAmount: 0,
-                products: [
-                    {
-                        id: 1,
-                        product: 'Digital Camera',
-                        availableQuantity: 40,
-                        sellingQuantity: 1,
-                        price: 75000,
-                        totalPrice: 75000,
-                    },
-                ],
-                saleDate: '2024-01-24',
-                totalBillAmount: 75000,
                 billType: 'fake',
             },
         ];

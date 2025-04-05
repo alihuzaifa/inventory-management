@@ -51,7 +51,7 @@ interface CustomerDetails {
 }
 
 interface InvoiceRecord {
-    id: number;
+    _id: string;
     customerName: string;
     phoneNumber: string;
     paymentTypes: string[];
@@ -274,7 +274,7 @@ const KhataSale = () => {
         }
 
         const newInvoice: InvoiceRecord = {
-            id: initialRecords?.length + 1,
+            _id: `${initialRecords?.length + 1}`,
             customerName: customerData.customerName,
             phoneNumber: customerData.phoneNumber,
             paymentTypes: customerData.paymentTypes,
@@ -309,7 +309,7 @@ const KhataSale = () => {
         setIsViewModalOpen(true);
     };
 
-    const handleDeleteInvoice = (invoiceId: number) => {
+    const handleDeleteInvoice = (invoiceId: string) => {
         Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
@@ -320,8 +320,8 @@ const KhataSale = () => {
             reverseButtons: true,
         }).then((result) => {
             if (result.isConfirmed) {
-                setInitialRecords((prev) => prev.filter((record) => record.id !== invoiceId));
-                setRecordsData((prev) => prev.filter((record) => record.id !== invoiceId));
+                setInitialRecords((prev) => prev.filter((record) => record._id !== invoiceId));
+                setRecordsData((prev) => prev.filter((record) => record._id !== invoiceId));
                 Swal.fire('Deleted!', 'Invoice has been deleted.', 'success');
             }
         });
@@ -425,7 +425,7 @@ const KhataSale = () => {
 
     const handleDownloadExcel = () => {
         const excelData = recordsData.map((item) => ({
-            'Invoice #': item.id,
+            'Invoice #': item._id,
             Customer: item.customerName,
             Phone: item.phoneNumber,
             'Total Amount': `Rs. ${item.totalBillAmount.toLocaleString()}`,
@@ -785,7 +785,7 @@ const KhataSale = () => {
                                         <button className="btn btn-sm btn-primary" onClick={() => handleViewInvoice(row)}>
                                             <IconEye className="w-4 h-4" />
                                         </button>
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row.id)}>
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row._id)}>
                                             Delete
                                         </button>
                                     </div>
