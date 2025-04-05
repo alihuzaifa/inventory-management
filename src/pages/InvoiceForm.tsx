@@ -126,20 +126,32 @@ const Invoice = () => {
         }
     };
 
-    const fetchAllInvoices = async () => {
+    const fetchLastWeekInvoices = async () => {
         try {
-            const allInvoices = await InventoryManagement.GetAllInvoices();
-            if (allInvoices.invoices.length > 0) {
-                setInitialRecords(allInvoices.invoices);
+            const response = await InventoryManagement.GetLastWeekInvoices();
+            if (response) {
+                setInitialRecords(response.invoices);
+                setRecordsData(response.invoices);
+                // You might want to store and use these values
+                const { pagination } = response;
+
+                // Optional: Update page info if needed
+                setPage(pagination.currentPage);
+                setPageSize(pagination.itemsPerPage);
             }
         } catch (error) {
-            console.error('Error fetching invoices:', error);
+            console.error('Error fetching last week invoices:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to fetch last week\'s invoices',
+            });
         }
     };
 
     // Optional combined fetch if needed
     const fetchInitialData = async () => {
-        await Promise.all([fetchStocksForDropdown(), fetchAllInvoices()]);
+        await Promise.all([fetchStocksForDropdown(), fetchLastWeekInvoices()]);
     };
 
     useEffect(() => {
@@ -166,7 +178,7 @@ const Invoice = () => {
         if (filterStates.dateRange.from && filterStates.dateRange.to) {
             const fromDate = new Date(filterStates.dateRange.from);
             const toDate = new Date(filterStates.dateRange.to);
-            toDate.setHours(23, 59, 59); 
+            toDate.setHours(23, 59, 59);
 
             filteredData = filteredData.filter((item) => {
                 const itemDate = new Date(item.saleDate);

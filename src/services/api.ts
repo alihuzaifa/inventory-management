@@ -300,14 +300,38 @@ const CreateInvoice = async (data: any) => {
     }
 };
 
-const GetAllInvoices = async () => {
+const GetAllInvoices = async (params: any = {}) => {
     try {
+        // Convert params object to URLSearchParams
+        const queryParams = new URLSearchParams();
+
+        // Add pagination params
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+
+        // Add sorting params
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+        // Add date range filters
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+
+        // Add other filters
+        if (params.billType) queryParams.append('billType', params.billType);
+        if (params.search) queryParams.append('search', params.search);
+
+        // Construct URL with query parameters
+        const url = `${BASE_URL}invoices${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
         const response = await request({
-            url: `${BASE_URL}invoices`,
+            url,
             method: URL_METHODS.GET,
         });
+
         return response;
     } catch (error) {
+        console.error('Error fetching invoices:', error);
         throw error;
     }
 };
@@ -395,6 +419,41 @@ const UpdateInvoicePayment = async (id: string, data: {
     }
 };
 
+const GetLastWeekInvoices = async (params?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: string;
+    billType?: string;
+    paymentType?: string;
+    minAmount?: number;
+    maxAmount?: number;
+}) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/last-week`,
+            method: URL_METHODS.GET,
+            params
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const CreateKhata = async (data: any) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}khata`,
+            method: URL_METHODS.POST,
+            data,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 const InventoryManagement = {
     Login,
     CreateUser,
@@ -425,6 +484,8 @@ const InventoryManagement = {
     getProductStockForDropdown,
     DeleteInvoice,
     UpdateInvoice,
-    UpdateInvoicePayment
+    UpdateInvoicePayment,
+    GetLastWeekInvoices,
+    CreateKhata
 }
 export default InventoryManagement;

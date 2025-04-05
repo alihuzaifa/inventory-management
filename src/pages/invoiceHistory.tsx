@@ -277,21 +277,39 @@ const InvoiceHistory = () => {
         return new Date(date).toLocaleDateString();
     };
 
-    const fetchAllInvoices = async () => {
+    // In your InvoiceHistory component
+    const fetchInvoices = async () => {
         try {
-            const allInvoices = await InventoryManagement.GetAllInvoices();
-            if (allInvoices.invoices.length > 0) {
-                setInitialRecords(allInvoices.invoices);
-                setRecordsData(allInvoices.invoices);
-            }
+            const response = await InventoryManagement.GetAllInvoices({
+                page: tableStates.page,
+                limit: tableStates.pageSize,
+                sortBy: tableStates.sortStatus.columnAccessor,
+                sortOrder: tableStates.sortStatus.direction,
+                startDate: filterStates.dateRange.from,
+                endDate: filterStates.dateRange.to,
+                billType: filterStates.selectedBillType !== 'all' ? filterStates.selectedBillType : undefined,
+                search: filterStates.search || undefined
+            });
+
+            setInitialRecords(response.invoices);
+            setRecordsData(response.invoices);
         } catch (error) {
             console.error('Error fetching invoices:', error);
+            // Handle error (show toast notification, etc.)
         }
     };
 
+    // Use in useEffect
     useEffect(() => {
-        fetchAllInvoices();
-    }, []);
+        fetchInvoices();
+    }, [
+        tableStates.page,
+        tableStates.pageSize,
+        tableStates.sortStatus,
+        filterStates.dateRange,
+        filterStates.selectedBillType,
+        filterStates.search
+    ]);
 
     // Define columns for export
     const col = ['invoiceNumber', 'customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
@@ -423,41 +441,63 @@ const InvoiceHistory = () => {
         setIsPaymentModalOpen(true);
     };
 
-    const handlePaymentSubmit = (values: PaymentUpdateFormData): void => {
+    const handlePaymentSubmit = async (values: PaymentFormValues) => {
         if (!selectedInvoiceForPayment) return;
 
-        const newCashAmount = Number(values.cashAmount || 0);
-        const newBankAmount = Number(values.bankAmount || 0);
-        const newCheckAmount = Number(values.checkAmount || 0);
-        const totalNewPayment = newCashAmount + newBankAmount + newCheckAmount;
+        const cashAmount = Number(values.cashAmount || 0);
+        const bankAmount = Number(values.bankAmount || 0);
+        const checkAmount = Number(values.checkAmount || 0);
+        const totalNewPayment = cashAmount + bankAmount + checkAmount;
         const remainingAmount = calculateRemainingAmount(selectedInvoiceForPayment);
 
+        // Validate total payment against remaining amount
         if (totalNewPayment > remainingAmount) {
-            Swal.fire('Error', 'Total payment cannot exceed remaining amount', 'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Payment Error',
+                text: `Total payment (${totalNewPayment.toLocaleString()}) cannot exceed remaining amount (${remainingAmount.toLocaleString()})`,
+            });
             return;
         }
 
-        setInitialRecords((prev) =>
-            prev.map((record) => {
-                if (record._id === selectedInvoiceForPayment._id) {
-                    return {
-                        ...record,
-                        paymentTypes: [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[],
-                        cashAmount: record.cashAmount + newCashAmount,
-                        bankAmount: record.bankAmount + newBankAmount,
-                        checkAmount: record.checkAmount + newCheckAmount,
-                        bankName: values.bankName || record.bankName,
-                        checkNumber: values.checkNumber || record.checkNumber,
-                    };
+        try {
+            const response = await InventoryManagement.UpdateInvoicePayment(
+                selectedInvoiceForPayment._id,
+                {
+                    paymentTypes: values.paymentTypes,
+                    cashAmount,
+                    bankAmount,
+                    bankName: values.bankName,
+                    checkAmount,
+                    checkNumber: values.checkNumber,
                 }
-                return record;
-            })
-        );
+            );
 
-        setIsPaymentModalOpen(false);
-        setSelectedInvoiceForPayment(null);
-        Swal.fire('Success', 'Payment updated successfully', 'success');
+            if (response) {
+                // Update initialRecords with the new invoice data
+                setInitialRecords(prevRecords =>
+                    prevRecords.map(record =>
+                        record._id === response._id ? response : record
+                    )
+                );
+
+                // Update recordsData with the new invoice data
+                setRecordsData(prevRecords =>
+                    prevRecords.map(record =>
+                        record._id === response._id ? response : record
+                    )
+                );
+
+                setIsPaymentModalOpen(false);
+                setSelectedInvoiceForPayment(null);
+                Swal.fire('Success', 'Payment updated successfully', 'success');
+            }
+        } catch (error: any) {
+            console.error('Error updating payment:', error);
+            Swal.fire('Error', error.response?.data?.message || 'Failed to update payment', 'error');
+        }
     };
+
     const theme = useSelector((state: IRootState) => state.themeConfig);
     return (
         <>
