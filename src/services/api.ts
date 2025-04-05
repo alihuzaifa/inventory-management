@@ -375,6 +375,26 @@ const DeleteInvoice = async (id: string) => {
     }
 };
 
+const UpdateInvoicePayment = async (id: string, data: {
+    paymentTypes: string[];
+    cashAmount?: number;
+    bankAmount?: number;
+    bankName?: string;
+    checkAmount?: number;
+    checkNumber?: string;
+}) => {
+    try {
+        const response = await request({
+            url: `${BASE_URL}invoices/${id}/payment`,
+            method: URL_METHODS.PUT,
+            data,
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 const InventoryManagement = {
     Login,
     CreateUser,
@@ -404,6 +424,7 @@ const InventoryManagement = {
     GetInvoicesByCustomer,
     getProductStockForDropdown,
     DeleteInvoice,
-    UpdateInvoice
+    UpdateInvoice,
+    UpdateInvoicePayment
 }
 export default InventoryManagement;

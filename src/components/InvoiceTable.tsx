@@ -153,7 +153,7 @@ const InvoiceTable = ({
 
     const handleDownloadExcel = () => {
         const excelData = recordsData.map((item: any) => ({
-            'Invoice #': item._id,
+            'Invoice #': item.invoiceNumber,
             Customer: item.customerName,
             Phone: item.phoneNumber,
             'Total Amount': `Rs. ${item.totalBillAmount.toLocaleString()}`,
@@ -180,7 +180,6 @@ const InvoiceTable = ({
             <div className="panel mt-6">
                 <div className="flex md:items-center justify-between md:flex-row flex-col mb-4.5 gap-5">
                     <div className="flex items-center flex-wrap gap-2">
-                        <h5 className="font-semibold text-lg dark:text-white-light">Previous Invoices</h5>
                         <button type="button" onClick={() => exportTable('csv')} className="btn btn-primary btn-sm">
                             <IconFile className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
                             CSV
@@ -226,7 +225,7 @@ const InvoiceTable = ({
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
-                            { accessor: '_id', title: 'Invoice #', sortable: true },
+                            { accessor: 'invoiceNumber', title: 'Invoice #', sortable: true },
                             { accessor: 'customerName', title: 'Customer', sortable: true },
                             { accessor: 'phoneNumber', title: 'Phone', sortable: true },
                             {

@@ -15,6 +15,8 @@ import InvoicePDF from '../components/InvoicePdf';
 import IconDownload from '../components/Icon/IconDownload';
 import IconPlus from '../components/Icon/IconPlus';
 import { IRootState } from '../store';
+import InventoryManagement from '../services/api';
+import InvoiceTable from '../components/InvoiceTable';
 const InvoiceView = lazy(() => import('./Invoice'));
 
 // Payment Types
@@ -32,7 +34,7 @@ interface PaymentAmounts {
 
 // Product interface
 interface ProductItem {
-    _id: string;
+    id: number;
     product: string;
     availableQuantity: number;
     sellingQuantity: number;
@@ -42,7 +44,8 @@ interface ProductItem {
 
 // Base invoice interface
 interface BaseInvoice {
-    id: number;
+    _id: string;
+    invoiceNumber: string;
     customerName: string;
     phoneNumber: string;
     saleDate: string;
@@ -158,149 +161,97 @@ const InvoiceHistory = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Invoice History'));
-
-        // Replace the existing sampleData with this:
-        const sampleData: InvoiceRecord[] = [
-            {
-                id: 1,
-                customerName: 'John Doe',
-                phoneNumber: '12345678901',
-                paymentTypes: ['cash'],
-                cashAmount: 90000,
-                bankAmount: 0,
-                checkAmount: 0,
-                products: [
-                    {
-                        _id: '12',
-                        product: 'LED TV',
-                        availableQuantity: 100,
-                        sellingQuantity: 2,
-                        price: 45000,
-                        totalPrice: 90000,
-                    },
-                ],
-                saleDate: '2024-01-15',
-                totalBillAmount: 90000,
-                billType: 'perfect',
-            },
-            {
-                id: 2,
-                customerName: 'Alice Smith',
-                phoneNumber: '12345678902',
-                paymentTypes: ['bank', 'cash'],
-                cashAmount: 30000,
-                bankAmount: 40000,
-                checkAmount: 0,
-                products: [
-                    {
-                        _id: '2',
-                        product: 'Laptop',
-                        availableQuantity: 50,
-                        sellingQuantity: 1,
-                        price: 70000,
-                        totalPrice: 70000,
-                    },
-                ],
-                saleDate: '2024-01-16',
-                totalBillAmount: 70000,
-                billType: 'fake',
-            },
-            {
-                id: 3,
-                customerName: 'Bob Wilson',
-                phoneNumber: '12345678903',
-                paymentTypes: ['check'],
-                cashAmount: 0,
-                bankAmount: 0,
-                checkAmount: 120000,
-                checkNumber: 'CHK001',
-                products: [
-                    {
-                        _id: '223',
-                        product: 'Refrigerator',
-                        availableQuantity: 30,
-                        sellingQuantity: 1,
-                        price: 120000,
-                        totalPrice: 120000,
-                    },
-                ],
-                saleDate: '2024-01-17',
-                totalBillAmount: 120000,
-                billType: 'perfect',
-            },
-            {
-                id: 4,
-                customerName: 'Carol Brown',
-                phoneNumber: '12345678904',
-                paymentTypes: ['cash', 'bank'],
-                cashAmount: 25000,
-                bankAmount: 25000,
-                checkAmount: 0,
-                products: [
-                    {
-                        _id: '344',
-                        product: 'Mobile Phone',
-                        availableQuantity: 200,
-                        sellingQuantity: 1,
-                        price: 80000,
-                        totalPrice: 80000,
-                    },
-                ],
-                saleDate: '2024-01-18',
-                totalBillAmount: 80000,
-                billType: 'fake',
-            },
-        ];
-
-        setInitialRecords(sampleData);
-        setRecordsData(sampleData);
     }, [dispatch]);
 
     useEffect(() => {
         const filteredData = initialRecords.filter((item) => {
-            const matchesSearch =
-                filterStates.search === ''
-                    ? true
-                    : item.customerName.toLowerCase().includes(String(filterStates.search).toLowerCase()) ||
-                      item.phoneNumber.includes(String(filterStates.search)) ||
-                      item.paymentTypes.some((type) => type.toLowerCase().includes(String(filterStates.search).toLowerCase())) ||
-                      item.totalBillAmount.toString().includes(String(filterStates.search)) ||
-                      item.billType.toLowerCase().includes(String(filterStates.search).toLowerCase()) ||
-                      new Date(item.saleDate).toLocaleDateString().includes(String(filterStates.search));
+            // Search filter - improved to handle multiple fields and null checks
+            const searchTerm = String(filterStates.search).toLowerCase().trim();
+            const matchesSearch = !searchTerm || (
+                (item.customerName?.toLowerCase() || '').includes(searchTerm) ||
+                (item.phoneNumber || '').includes(searchTerm) ||
+                (item.invoiceNumber?.toLowerCase() || '').includes(searchTerm) ||
+                item.paymentTypes.some(type => type.toLowerCase().includes(searchTerm)) ||
+                item.totalBillAmount.toLocaleString().includes(searchTerm) ||
+                item.billType.toLowerCase().includes(searchTerm) ||
+                new Date(item.saleDate).toLocaleDateString().includes(searchTerm) ||
+                calculateRemainingAmount(item).toLocaleString().includes(searchTerm)
+            );
 
-            const matchesPayment = filterStates.selectedPaymentMethod === 'all' ? true : item.paymentTypes.includes(filterStates.selectedPaymentMethod);
+            // Payment method filter
+            const matchesPayment = filterStates.selectedPaymentMethod === 'all' ||
+                item.paymentTypes.includes(filterStates.selectedPaymentMethod);
 
-            const matchesBillType = filterStates.selectedBillType === 'all' ? true : item.billType === filterStates.selectedBillType;
+            // Bill type filter
+            const matchesBillType = filterStates.selectedBillType === 'all' ||
+                item.billType === filterStates.selectedBillType;
 
-            const matchesDateRange = true; // Implement date range filtering if needed
+            // Date range filter
+            const matchesDateRange = !filterStates.dateRange.from || !filterStates.dateRange.to || (
+                (() => {
+                    const itemDate = new Date(item.saleDate);
+                    const fromDate = new Date(filterStates.dateRange.from);
+                    const toDate = new Date(filterStates.dateRange.to);
+                    toDate.setHours(23, 59, 59, 999); // Include entire end date
+                    return itemDate >= fromDate && itemDate <= toDate;
+                })()
+            );
 
             return matchesSearch && matchesPayment && matchesBillType && matchesDateRange;
         });
 
-        // Sort data
+        // Sort data with improved type handling
         const sortedData = [...filteredData].sort((a, b) => {
-            const first = a[tableStates.sortStatus.columnAccessor as keyof InvoiceRecord];
-            const second = b[tableStates.sortStatus.columnAccessor as keyof InvoiceRecord];
-            const dir = tableStates.sortStatus.direction === 'desc' ? -1 : 1;
+            const columnAccessor = tableStates.sortStatus.columnAccessor;
+            const direction = tableStates.sortStatus.direction === 'desc' ? -1 : 1;
 
-            if (typeof first === 'string' && typeof second === 'string') {
-                return first.localeCompare(second) * dir;
+            // Special handling for different column types
+            switch (columnAccessor) {
+                case 'saleDate':
+                    return (new Date(a.saleDate).getTime() - new Date(b.saleDate).getTime()) * direction;
+
+                case 'totalBillAmount':
+                case 'remainingAmount':
+                    const aValue = columnAccessor === 'remainingAmount' ?
+                        calculateRemainingAmount(a) : a.totalBillAmount;
+                    const bValue = columnAccessor === 'remainingAmount' ?
+                        calculateRemainingAmount(b) : b.totalBillAmount;
+                    return (aValue - bValue) * direction;
+
+                case 'paymentTypes':
+                    return (a.paymentTypes.join(',').localeCompare(b.paymentTypes.join(','))) * direction;
+
+                default:
+                    const first = a[columnAccessor as keyof InvoiceRecord];
+                    const second = b[columnAccessor as keyof InvoiceRecord];
+
+                    if (typeof first === 'string' && typeof second === 'string') {
+                        return first.localeCompare(second) * direction;
+                    }
+                    if (first === undefined || second === undefined) {
+                        return 0;
+                    }
+                    return ((first < second ? -1 : first > second ? 1 : 0) * direction);
             }
-            if (first === undefined || second === undefined) {
-                return 0;
-            }
-            return (first < second ? -1 : first > second ? 1 : 0) * dir;
         });
 
         setRecordsData(sortedData);
-    }, [filterStates.search, filterStates.selectedPaymentMethod, filterStates.selectedBillType, filterStates.dateRange, tableStates.sortStatus, initialRecords]);
+    }, [
+        filterStates.search,
+        filterStates.selectedPaymentMethod,
+        filterStates.selectedBillType,
+        filterStates.dateRange.from,
+        filterStates.dateRange.to,
+        tableStates.sortStatus,
+        initialRecords
+    ]);
 
     const handleViewInvoice = (invoice: InvoiceRecord) => {
         setSelectedInvoice(invoice);
         setIsViewModalOpen(true);
     };
 
-    const handleDeleteInvoice = (invoiceId: number) => {
+    const handleDeleteInvoice = (invoiceId: string) => {
         Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
@@ -311,8 +262,8 @@ const InvoiceHistory = () => {
             reverseButtons: true,
         }).then((result) => {
             if (result.isConfirmed) {
-                setInitialRecords((prev) => prev.filter((record) => record.id !== invoiceId));
-                setRecordsData((prev) => prev.filter((record) => record.id !== invoiceId));
+                setInitialRecords((prev) => prev.filter((record) => record._id !== invoiceId));
+                setRecordsData((prev) => prev.filter((record) => record._id !== invoiceId));
                 Swal.fire('Deleted!', 'Invoice has been deleted.', 'success');
             }
         });
@@ -326,8 +277,24 @@ const InvoiceHistory = () => {
         return new Date(date).toLocaleDateString();
     };
 
+    const fetchAllInvoices = async () => {
+        try {
+            const allInvoices = await InventoryManagement.GetAllInvoices();
+            if (allInvoices.invoices.length > 0) {
+                setInitialRecords(allInvoices.invoices);
+                setRecordsData(allInvoices.invoices);
+            }
+        } catch (error) {
+            console.error('Error fetching invoices:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchAllInvoices();
+    }, []);
+
     // Define columns for export
-    const col = ['id', 'customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
+    const col = ['invoiceNumber', 'customerName', 'phoneNumber', 'totalBillAmount', 'remainingAmount', 'billType', 'paymentTypes', 'saleDate'];
 
     const header = ['Invoice #', 'Customer', 'Phone', 'Total Amount', 'Remaining Amount', 'Bill Type', 'Payment Method', 'Date'];
 
@@ -426,7 +393,7 @@ const InvoiceHistory = () => {
 
     const handleDownloadExcel = () => {
         const excelData = recordsData.map((item) => ({
-            'Invoice #': item.id,
+            'Invoice #': item.invoiceNumber,
             Customer: item.customerName,
             Phone: item.phoneNumber,
             'Total Amount': `Rs. ${item.totalBillAmount.toLocaleString()}`,
@@ -472,7 +439,7 @@ const InvoiceHistory = () => {
 
         setInitialRecords((prev) =>
             prev.map((record) => {
-                if (record.id === selectedInvoiceForPayment.id) {
+                if (record._id === selectedInvoiceForPayment._id) {
                     return {
                         ...record,
                         paymentTypes: [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[],
@@ -551,7 +518,7 @@ const InvoiceHistory = () => {
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
-                            { accessor: 'id', title: 'Invoice #', sortable: true },
+                            { accessor: 'invoiceNumber', title: 'Invoice #', sortable: true },
                             { accessor: 'customerName', title: 'Customer', sortable: true },
                             { accessor: 'phoneNumber', title: 'Phone', sortable: true },
                             {
@@ -610,7 +577,7 @@ const InvoiceHistory = () => {
                                                 <IconPlus />
                                             </button>
                                         )}
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row.id)}>
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteInvoice(row._id)}>
                                             Delete
                                         </button>
                                     </div>
@@ -630,7 +597,6 @@ const InvoiceHistory = () => {
                     />
                 </div>
             </div>
-
             {/* Invoice View Modal */}
             {isViewModalOpen && (
                 <div className="absolute inset-0 z-[1050] flex items-center justify-center bg-black bg-opacity-50">

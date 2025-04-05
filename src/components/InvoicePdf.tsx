@@ -235,7 +235,7 @@ interface InvoicePDFProps {
 
 const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
     const getTotalPaidAmount = () => {
-        return Number(invoiceData.cashAmount || 0) + Number(invoiceData.bankAmount || 0);
+        return Number(invoiceData.cashAmount || 0) + Number(invoiceData.bankAmount || 0) + Number(invoiceData.checkAmount || 0);
     };
 
     const getRemainingAmount = () => {
@@ -304,7 +304,7 @@ const InvoicePDF = ({ invoiceData, themeConfig }: InvoicePDFProps) => {
                     <View style={styles.infoSection}>
                         <View style={styles.infoRow}>
                             <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Invoice Number:</Text>
-                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>#{invoiceData.id}</Text>
+                            <Text style={[styles.value, isLight ? styles.valueLight : styles.valueDark]}>{invoiceData.invoiceNumber}</Text>
                         </View>
                         <View style={styles.infoRow}>
                             <Text style={[styles.label, isLight ? styles.labelLight : styles.labelDark]}>Payment Status:</Text>

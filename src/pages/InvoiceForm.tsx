@@ -147,17 +147,49 @@ const Invoice = () => {
     }, []);
 
     useEffect(() => {
-        const filteredData = initialRecords.filter((item) => {
-            return (
-                item.customerName.toLowerCase().includes(search.toLowerCase()) ||
-                item.phoneNumber.includes(search) ||
-                item.paymentTypes.some((type) => type.toLowerCase().includes(search.toLowerCase())) ||
-                item.totalBillAmount.toString().includes(search) ||
-                new Date(item.saleDate).toLocaleDateString().includes(search)
+        let filteredData = [...initialRecords];
+
+        if (filterStates.search) {
+            const searchTerm = filterStates.search.toLowerCase();
+            filteredData = filteredData.filter((item) => {
+                return (
+                    item.customerName.toLowerCase().includes(searchTerm) ||
+                    item.phoneNumber.includes(searchTerm) ||
+                    item.paymentTypes.some(type => type.toLowerCase().includes(searchTerm)) ||
+                    item.totalBillAmount.toString().includes(searchTerm) ||
+                    new Date(item.saleDate).toLocaleDateString().includes(searchTerm) ||
+                    item.billType.toLowerCase().includes(searchTerm)
+                );
+            });
+        }
+
+        if (filterStates.dateRange.from && filterStates.dateRange.to) {
+            const fromDate = new Date(filterStates.dateRange.from);
+            const toDate = new Date(filterStates.dateRange.to);
+            toDate.setHours(23, 59, 59); 
+
+            filteredData = filteredData.filter((item) => {
+                const itemDate = new Date(item.saleDate);
+                return itemDate >= fromDate && itemDate <= toDate;
+            });
+        }
+
+        // Payment method filter
+        if (filterStates.selectedPaymentMethod !== 'all') {
+            filteredData = filteredData.filter((item) =>
+                item.paymentTypes.includes(filterStates.selectedPaymentMethod)
             );
-        });
+        }
+
+        // Bill type filter
+        if (filterStates.selectedBillType !== 'all') {
+            filteredData = filteredData.filter((item) =>
+                item.billType === filterStates.selectedBillType
+            );
+        }
+
         setRecordsData(filteredData);
-    }, [search, initialRecords]);
+    }, [filterStates, initialRecords]);
 
     const handleCustomerSubmit = (values: any) => {
         // Calculate total payment
@@ -421,7 +453,7 @@ const Invoice = () => {
         setIsPaymentModalOpen(true);
     };
 
-    const handlePaymentSubmit = (values: PaymentFormValues) => {
+    const handlePaymentSubmit = async (values: PaymentFormValues) => {
         if (!selectedInvoiceForPayment) return;
 
         const cashAmount = Number(values.cashAmount || 0);
@@ -440,47 +472,42 @@ const Invoice = () => {
             return;
         }
 
-        // Update records if validation passes
-        setInitialRecords((prev) =>
-            prev.map((record) => {
-                if (record._id === selectedInvoiceForPayment._id) {
-                    const updatedPaymentTypes = [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[];
-                    return {
-                        ...record,
-                        paymentTypes: updatedPaymentTypes,
-                        cashAmount: record.cashAmount + cashAmount,
-                        bankAmount: record.bankAmount + bankAmount,
-                        checkAmount: record.checkAmount + checkAmount,
-                        bankName: values.bankName || record.bankName,
-                        checkNumber: values.checkNumber || record.checkNumber,
-                    };
+        try {
+            const response = await InventoryManagement.UpdateInvoicePayment(
+                selectedInvoiceForPayment._id,
+                {
+                    paymentTypes: values.paymentTypes,
+                    cashAmount,
+                    bankAmount,
+                    bankName: values.bankName,
+                    checkAmount,
+                    checkNumber: values.checkNumber,
                 }
-                return record;
-            })
-        );
+            );
 
-        // Update recordsData to reflect changes
-        setRecordsData((prev) =>
-            prev.map((record) => {
-                if (record._id === selectedInvoiceForPayment._id) {
-                    const updatedPaymentTypes = [...new Set([...record.paymentTypes, ...values.paymentTypes])] as PaymentType[];
-                    return {
-                        ...record,
-                        paymentTypes: updatedPaymentTypes,
-                        cashAmount: record.cashAmount + cashAmount,
-                        bankAmount: record.bankAmount + bankAmount,
-                        checkAmount: record.checkAmount + checkAmount,
-                        bankName: values.bankName || record.bankName,
-                        checkNumber: values.checkNumber || record.checkNumber,
-                    };
-                }
-                return record;
-            })
-        );
+            if (response) {
+                // Update initialRecords with the new invoice data
+                setInitialRecords(prevRecords =>
+                    prevRecords.map(record =>
+                        record._id === response._id ? response : record
+                    )
+                );
 
-        setIsPaymentModalOpen(false);
-        setSelectedInvoiceForPayment(null);
-        Swal.fire('Success', 'Payment updated successfully', 'success');
+                // Update recordsData with the new invoice data
+                setRecordsData(prevRecords =>
+                    prevRecords.map(record =>
+                        record._id === response._id ? response : record
+                    )
+                );
+
+                setIsPaymentModalOpen(false);
+                setSelectedInvoiceForPayment(null);
+                Swal.fire('Success', 'Payment updated successfully', 'success');
+            }
+        } catch (error: any) {
+            console.error('Error updating payment:', error);
+            Swal.fire('Error', error.response?.data?.message || 'Failed to update payment', 'error');
+        }
     };
 
     return (
